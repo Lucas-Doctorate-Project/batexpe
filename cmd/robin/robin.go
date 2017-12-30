@@ -134,6 +134,7 @@ Usage:
   robin -h | --help
   robin --version
 
+
 Examples:
   robin --output-dir=/tmp \
         --batcmd="batsim -p platform.xml -w workload.json" \
@@ -142,6 +143,7 @@ Examples:
         --batcmd="batsim -p platform.xml -w workload.json --batexec"
   robin input_description_file.yaml
   robin generate output_description_file.yaml
+
 
 Timeout options:
   --simulation-timeout=<time>   Simulation timeout in seconds.
@@ -165,21 +167,39 @@ Verbosity options:
   --debug                       Print debug information.
   --json-logs                   Print information in JSON.`
 
-	arguments, err := docopt.Parse(usage, nil, true, "0.1.0", false)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Fatal("Could not parse arguments")
-	}
-
+	arguments, _ := docopt.Parse(usage, nil, true, "0.1.0", false)
 	setupLogging(arguments)
 
 	log.WithFields(log.Fields{
 		"args": arguments,
 	}).Debug("Arguments parsed")
 
-	// Generate a file
+	// Generate mode?
 	if arguments["generate"] == true {
 		generateDescription(arguments)
 	}
+
+	// Execution mode.
+
+	// Read what should be executed
+	var exp expe.Experiment
+	if arguments["<description-file>"] != nil {
+		fil := arguments["<description-file>"].(string)
+		byt, err := ioutil.ReadFile(fil)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err":      err,
+				"filename": fil,
+			}).Fatal("Cannot open description file")
+		}
+
+		exp = expe.FromYaml(string(byt))
+	} else {
+		exp = ExperimentFromArgs(arguments)
+	}
+
+	// Prepare execution
+	expe.PrepareOutput(exp)
+	batargs := expe.ParseBatsimCommand(exp.Batcmd)
+	log.Info(batargs)
 }

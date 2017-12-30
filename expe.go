@@ -1,7 +1,6 @@
 package expe
 
 import (
-	//"github.com/davecgh/go-spew/spew"
 	"github.com/ghodss/yaml"
 	log "github.com/sirupsen/logrus"
 )
