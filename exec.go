@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -31,14 +33,14 @@ func PrepareDirs(exp Experiment) {
 	CreateDirIfNeeded(exp.OutputDir + "/cmd")
 }
 
-func WaitTcpPortAvailable(port uint16, onexit chan bool) {
+func WaitTcpPortAvailablePsutil(port uint16, onexit chan bool) {
 	available := false
 
 	for !available {
 		// Retrieve all TCP connections
 		con, err := net.Connections("tcp")
 		if err != nil {
-			log.Error("Cannot list open sockets")
+			log.Error("Cannot list open sockets via psutil")
 			break
 		}
 
@@ -48,6 +50,37 @@ func WaitTcpPortAvailable(port uint16, onexit chan bool) {
 			if elem.Laddr.Port == uint32(port) {
 				available = false
 			}
+		}
+
+		if !available {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	onexit <- true
+}
+
+func WaitTcpPortAvailableSs(port uint16, onexit chan bool) {
+	available := false
+	portStr := strconv.FormatUint(uint64(port), 10)
+	r := regexp.MustCompile(":" + portStr)
+
+	for !available {
+		ssCmd := exec.Command("ss")
+		ssCmd.Args = []string{"ss", "-tln"}
+
+		outBuf, err := ssCmd.Output()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err":     err,
+				"command": ssCmd,
+			}).Error("Cannot list open sockets via ss")
+			break
+		}
+
+		available = !(r.Match(outBuf))
+		if !available {
+			time.Sleep(100 * time.Millisecond)
 		}
 	}
 
@@ -374,7 +407,7 @@ func ExecuteOne(exp Experiment) int {
 		}).Info("Waiting socket availability")
 
 		okSock := make(chan bool)
-		go WaitTcpPortAvailable(port, okSock)
+		go WaitTcpPortAvailableSs(port, okSock)
 		select {
 		case <-time.After(time.Duration(exp.SocketTimeout) * time.Second):
 			log.WithFields(log.Fields{
