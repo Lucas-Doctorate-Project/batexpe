@@ -1,0 +1,24 @@
+digraph G {
+    node [style=filled,fillcolor="#A5CEE3"];
+
+    subgraph cluster_1 {
+        runbat [label="run Batsim"];
+        batstatus [shape=diamond, label="completes\nsuccessfully?"];
+        batok [label="Batsim OK"];
+        execend [label="Simulation OK"];
+
+        runbat -> batstatus;
+        batstatus -> batok [label="yes"];
+        batok -> execend;
+
+        label = "execution";
+        labeljust="r";
+        style=filled;
+        fillcolor = "#B1DF89"
+    }
+    start -> runbat;
+    execend -> end;
+
+    start [label="start"];
+    end [shape=doublecircle];
+}
