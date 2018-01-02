@@ -12,6 +12,61 @@ type Experiment struct {
 	SimulationTimeout int    `json:"simulation-timeout"`
 	SocketTimeout     int    `json:"socket-timeout"`
 	SuccessTimeout    int    `json:"success-timeout"`
+	FailureTimeout    int    `json:"failure-timeout"`
+}
+
+func readStringFromDict(data map[string]interface{}, key string, yam string) string {
+	ret := ""
+	if val, ok := data[key]; ok {
+		if val == nil {
+			ret = ""
+		} else {
+			switch val.(type) {
+			case string:
+				ret = val.(string)
+			default:
+				log.WithFields(log.Fields{
+					"yaml": yam,
+					"key":  key,
+					"map":  data,
+				}).Fatal("Invalid yaml: field is not a string")
+			}
+		}
+	} else {
+		log.WithFields(log.Fields{
+			"yaml": yam,
+			"key":  key,
+			"map":  data,
+		}).Fatal("Invalid yaml: missing field")
+	}
+
+	return ret
+}
+
+func readIntFromDict(data map[string]interface{}, key string, yam string) int {
+	ret := 0
+	if val, ok := data[key]; ok {
+		switch val.(type) {
+		case int:
+			ret = val.(int)
+		case float64:
+			ret = int(val.(float64))
+		default:
+			log.WithFields(log.Fields{
+				"yaml": yam,
+				"key":  key,
+				"map":  data,
+			}).Fatal("Invalid yaml: field is not a string")
+		}
+	} else {
+		log.WithFields(log.Fields{
+			"yaml": yam,
+			"key":  key,
+			"map":  data,
+		}).Fatal("Invalid yaml: missing field")
+	}
+
+	return ret
 }
 
 func FromYaml(str string) Experiment {
@@ -32,12 +87,14 @@ func FromYaml(str string) Experiment {
 	}).Debug("yaml -> dict")
 
 	var expe Experiment
-	expe.Batcmd = data["batcmd"].(string)
-	expe.OutputDir = data["output-dir"].(string)
-	expe.Schedcmd = data["schedcmd"].(string)
-	expe.SimulationTimeout = int(data["simulation-timeout"].(float64))
-	expe.SocketTimeout = int(data["socket-timeout"].(float64))
-	expe.SuccessTimeout = int(data["success-timeout"].(float64))
+	expe.Batcmd = readStringFromDict(data, "batcmd", str)
+	expe.OutputDir = readStringFromDict(data, "output-dir", str)
+	expe.Schedcmd = readStringFromDict(data, "schedcmd", str)
+	expe.SimulationTimeout = readIntFromDict(data, "simulation-timeout", str)
+	expe.SocketTimeout = readIntFromDict(data, "socket-timeout", str)
+	expe.SuccessTimeout = readIntFromDict(data, "success-timeout", str)
+	expe.FailureTimeout = readIntFromDict(data, "failure-timeout", str)
+
 	log.WithFields(log.Fields{
 		"expe": expe,
 	}).Debug("dict->expe")

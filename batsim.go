@@ -108,8 +108,13 @@ Other options:
 
 	log.WithFields(log.Fields{
 		"batsim command": batcmd,
-		"split command":  splitCmd,
 	}).Debug("Batcmd -> shlex -> split")
+
+	if len(splitCmd) <= 1 {
+		log.WithFields(log.Fields{
+			"batsim command": batcmd,
+		}).Fatal("Batsim command should have at least 2 parts")
+	}
 
 	arguments, err := docopt.Parse(batsimDocopt, splitCmd[1:], true, "?",
 		false, false)
@@ -117,7 +122,6 @@ Other options:
 		log.WithFields(log.Fields{
 			"err":            err,
 			"batsim command": batcmd,
-			"split command":  splitCmd,
 		}).Fatal("Cannot parse Batsim command")
 	}
 

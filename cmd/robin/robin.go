@@ -41,6 +41,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) expe.Experiment {
 	exp.SimulationTimeout = 604800
 	exp.SocketTimeout = 10
 	exp.SuccessTimeout = 3600
+	exp.FailureTimeout = 5
 
 	if arguments["--batcmd"] != nil {
 		exp.Batcmd = arguments["--batcmd"].(string)
@@ -87,6 +88,17 @@ func ExperimentFromArgs(arguments map[string]interface{}) expe.Experiment {
 		}
 	}
 
+	if arguments["--failure-timeout"] != nil {
+		exp.FailureTimeout, err = strconv.Atoi(
+			arguments["--failure-timeout"].(string))
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err":               err,
+				"--failure-timeout": arguments["--failure-timeout"].(string),
+			}).Fatal("Invalid failure timeout")
+		}
+	}
+
 	log.WithFields(log.Fields{
 		"args": arguments,
 		"expe": exp,
@@ -120,6 +132,7 @@ Usage:
         [--simulation-timeout=<time>]
         [--socket-timeout=<time>]
         [--success-timeout=<time>]
+        [--failure-timeout=<time>]
         [(--verbose | --quiet | --debug)] [--json-logs]
   robin <description-file>
         [(--verbose | --quiet | --debug)] [--json-logs]
@@ -130,6 +143,7 @@ Usage:
         [--simulation-timeout=<time>]
         [--socket-timeout=<time>]
         [--success-timeout=<time>]
+        [--failure-timeout=<time>]
         [(--verbose | --quiet | --debug)] [--json-logs]
   robin -h | --help
   robin --version
@@ -161,6 +175,11 @@ Timeout options:
                                 successfully (returned 0).
                                 [default: 3600]
 
+  --failure-timeout=<time>      The timeout for the second process to complete
+                                once the first process has finished
+                                unsuccessfully.
+                                [default: 5]
+
 Verbosity options:
   --quiet                       Only print critical information.
   --verbose                     Print information. Default verbosity mode.
@@ -180,7 +199,6 @@ Verbosity options:
 	}
 
 	// Execution mode.
-
 	// Read what should be executed
 	var exp expe.Experiment
 	if arguments["<description-file>"] != nil {
@@ -198,8 +216,16 @@ Verbosity options:
 		exp = ExperimentFromArgs(arguments)
 	}
 
-	// Prepare execution
-	expe.PrepareOutput(exp)
-	batargs := expe.ParseBatsimCommand(exp.Batcmd)
-	log.Info(batargs)
+	log.WithFields(log.Fields{
+		"batsim command":     exp.Batcmd,
+		"output directory":   exp.OutputDir,
+		"scheduler command":  exp.Schedcmd,
+		"simulation timeout": exp.SimulationTimeout,
+		"socket timeout":     exp.SocketTimeout,
+		"success timeout":    exp.SuccessTimeout,
+		"failure timeout":    exp.FailureTimeout,
+	}).Debug("Instance description read")
+
+	ret := expe.ExecuteOne(exp)
+	os.Exit(ret)
 }
