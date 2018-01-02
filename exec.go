@@ -33,39 +33,108 @@ func PrepareDirs(exp Experiment) {
 	CreateDirIfNeeded(exp.OutputDir + "/cmd")
 }
 
-func WaitTcpPortAvailablePsutil(port uint16, onexit chan bool) {
-	available := false
+func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) {
+	port := PortFromBatSock(batargs.Socket, exp.Batcmd)
 
-	for !available {
+	log.WithFields(log.Fields{
+		"ready timeout (seconds)":   exp.ReadyTimeout,
+		"extracted port":            port,
+		"extracted socket endpoint": batargs.Socket,
+		"batsim command":            exp.Batcmd,
+	}).Info("Waiting for valid context")
+
+	socketInUse := true
+	anotherBatsim := true
+
+	sockChan := make(chan int)
+	batChan := make(chan int)
+
+	go waitTcpPortAvailableSs(port, sockChan)
+	go waitNoConflictingBatsim(port, batChan)
+
+	for socketInUse || anotherBatsim {
+		select {
+		case <-time.After(time.Duration(exp.ReadyTimeout) * time.Second):
+			log.WithFields(log.Fields{
+				"ready timeout (seconds)":    exp.ReadyTimeout,
+				"scanned port":               port,
+				"batsim command":             exp.Batcmd,
+				"socket in use":              socketInUse,
+				"conflicting batsim running": anotherBatsim,
+			}).Fatal("Context remains invalid")
+		case <-sockChan:
+			socketInUse = false
+		case <-batChan:
+			anotherBatsim = false
+		}
+	}
+}
+
+func waitNoConflictingBatsim(port uint16, onexit chan int) {
+	r := regexp.MustCompile(`(?m)^.*batsim\s+.*$`)
+	for {
+		// Retrieve running Batsim processes
+		psCmd := exec.Command("ps")
+		psCmd.Args = []string{"ps", "-e", "-o", "command"}
+
+		outBuf, err := psCmd.Output()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err":     err,
+				"command": psCmd,
+			}).Fatal("Cannot list running processes via ps")
+		}
+
+		conflict := false
+		for _, batcmd := range r.FindAllString(string(outBuf), -1) {
+			batargs := ParseBatsimCommand(batcmd)
+			lineport := PortFromBatSock(batargs.Socket, batcmd)
+
+			if lineport == port {
+				conflict = true
+			}
+		}
+
+		if !conflict {
+			onexit <- 1
+			return
+		} else {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+}
+
+func waitTcpPortAvailablePsutil(port uint16, onexit chan int) {
+	for {
 		// Retrieve all TCP connections
 		con, err := net.Connections("tcp")
 		if err != nil {
-			log.Error("Cannot list open sockets via psutil")
-			break
+			log.Fatal("Cannot list open sockets via psutil")
 		}
 
 		// Is the port we seek used?
-		available = true
+		available := true
 		for _, elem := range con {
 			if elem.Laddr.Port == uint32(port) {
 				available = false
 			}
 		}
 
+		if available {
+			onexit <- 1
+			return
+		}
 		if !available {
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
-
-	onexit <- true
 }
 
-func WaitTcpPortAvailableSs(port uint16, onexit chan bool) {
-	available := false
+func waitTcpPortAvailableSs(port uint16, onexit chan int) {
 	portStr := strconv.FormatUint(uint64(port), 10)
 	r := regexp.MustCompile(":" + portStr)
 
-	for !available {
+	for {
 		ssCmd := exec.Command("ss")
 		ssCmd.Args = []string{"ss", "-tln"}
 
@@ -74,17 +143,16 @@ func WaitTcpPortAvailableSs(port uint16, onexit chan bool) {
 			log.WithFields(log.Fields{
 				"err":     err,
 				"command": ssCmd,
-			}).Error("Cannot list open sockets via ss")
-			break
+			}).Fatal("Cannot list open sockets via ss")
 		}
 
-		available = !(r.Match(outBuf))
-		if !available {
+		if !(r.Match(outBuf)) {
+			onexit <- 1
+			return
+		} else {
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
-
-	onexit <- true
 }
 
 // Execute a command, writing status result on a channel
@@ -396,28 +464,9 @@ func ExecuteOne(exp Experiment) int {
 				"scheduler command": exp.Schedcmd,
 			}).Fatal("Sched command set but Batsim is in batexec mode")
 		}
-		// Wait for socket to become available
-		port := PortFromBatSock(batargs.Socket, exp.Batcmd)
 
-		log.WithFields(log.Fields{
-			"socket timeout (seconds)":  exp.SocketTimeout,
-			"extracted port":            port,
-			"extracted socket endpoint": batargs.Socket,
-			"batsim command":            exp.Batcmd,
-		}).Info("Waiting socket availability")
-
-		okSock := make(chan bool)
-		go WaitTcpPortAvailableSs(port, okSock)
-		select {
-		case <-time.After(time.Duration(exp.SocketTimeout) * time.Second):
-			log.WithFields(log.Fields{
-				"socket timeout (seconds)":  exp.SuccessTimeout,
-				"extracted port":            port,
-				"extracted socket endpoint": batargs.Socket,
-				"batsim command":            exp.Batcmd,
-			}).Fatal("Socket is not available")
-		case <-okSock:
-		}
+		// Wait for context to be ready (open sockets, batsim processes...)
+		waitReadyForSimulation(exp, batargs)
 
 		// Create context (handles timeout)
 		ctx, cancel := context.WithTimeout(context.Background(),

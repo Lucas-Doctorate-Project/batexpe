@@ -39,7 +39,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) expe.Experiment {
 	exp.OutputDir = "output-dir-unset"
 	exp.Schedcmd = "schedcmd-unset"
 	exp.SimulationTimeout = 604800
-	exp.SocketTimeout = 10
+	exp.ReadyTimeout = 10
 	exp.SuccessTimeout = 3600
 	exp.FailureTimeout = 5
 
@@ -66,14 +66,14 @@ func ExperimentFromArgs(arguments map[string]interface{}) expe.Experiment {
 		}
 	}
 
-	if arguments["--socket-timeout"] != nil {
-		exp.SocketTimeout, err = strconv.Atoi(
-			arguments["--socket-timeout"].(string))
+	if arguments["--ready-timeout"] != nil {
+		exp.ReadyTimeout, err = strconv.Atoi(
+			arguments["--ready-timeout"].(string))
 		if err != nil {
 			log.WithFields(log.Fields{
-				"err":              err,
-				"--socket-timeout": arguments["--socket-timeout"].(string),
-			}).Fatal("Invalid socket timeout")
+				"err":             err,
+				"--ready-timeout": arguments["--ready-timeout"].(string),
+			}).Fatal("Invalid ready timeout")
 		}
 	}
 
@@ -130,7 +130,7 @@ Usage:
         --batcmd=<batsim-command>
         [--schedcmd=<scheduler-command>]
         [--simulation-timeout=<time>]
-        [--socket-timeout=<time>]
+        [--ready-timeout=<time>]
         [--success-timeout=<time>]
         [--failure-timeout=<time>]
         [(--verbose | --quiet | --debug)] [--json-logs]
@@ -141,7 +141,7 @@ Usage:
         [--batcmd=<batsim-command>]
         [--schedcmd=<scheduler-command>]
         [--simulation-timeout=<time>]
-        [--socket-timeout=<time>]
+        [--ready-timeout=<time>]
         [--success-timeout=<time>]
         [--failure-timeout=<time>]
         [(--verbose | --quiet | --debug)] [--json-logs]
@@ -165,9 +165,11 @@ Timeout options:
                                 stopped. Default value is one week.
                                 [default: 604800]
 
-  --socket-timeout=<time>       Socket timeout in seconds.
-                                If the socket is still not usable after this
+  --ready-timeout=<time>        Ready timeout in seconds.
+                                If the context is still invalid after this
                                 time, the script is stopped.
+                                This includes socket already in use and
+                                conflicting Batsim instances.
                                 [default: 10]
 
   --success-timeout=<time>      The timeout for the second process to complete
@@ -221,7 +223,7 @@ Verbosity options:
 		"output directory":   exp.OutputDir,
 		"scheduler command":  exp.Schedcmd,
 		"simulation timeout": exp.SimulationTimeout,
-		"socket timeout":     exp.SocketTimeout,
+		"ready timeout":      exp.ReadyTimeout,
 		"success timeout":    exp.SuccessTimeout,
 		"failure timeout":    exp.FailureTimeout,
 	}).Debug("Instance description read")

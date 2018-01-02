@@ -10,7 +10,7 @@ type Experiment struct {
 	OutputDir         string `json:"output-dir"`
 	Schedcmd          string `json:"schedcmd"`
 	SimulationTimeout int    `json:"simulation-timeout"`
-	SocketTimeout     int    `json:"socket-timeout"`
+	ReadyTimeout      int    `json:"ready-timeout"`
 	SuccessTimeout    int    `json:"success-timeout"`
 	FailureTimeout    int    `json:"failure-timeout"`
 }
@@ -91,7 +91,7 @@ func FromYaml(str string) Experiment {
 	expe.OutputDir = readStringFromDict(data, "output-dir", str)
 	expe.Schedcmd = readStringFromDict(data, "schedcmd", str)
 	expe.SimulationTimeout = readIntFromDict(data, "simulation-timeout", str)
-	expe.SocketTimeout = readIntFromDict(data, "socket-timeout", str)
+	expe.ReadyTimeout = readIntFromDict(data, "ready-timeout", str)
 	expe.SuccessTimeout = readIntFromDict(data, "success-timeout", str)
 	expe.FailureTimeout = readIntFromDict(data, "failure-timeout", str)
 
