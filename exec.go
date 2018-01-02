@@ -2,6 +2,7 @@ package expe
 
 import (
 	"context"
+	"github.com/shirou/gopsutil/net"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
@@ -28,6 +29,29 @@ func PrepareDirs(exp Experiment) {
 	CreateDirIfNeeded(exp.OutputDir)
 	CreateDirIfNeeded(exp.OutputDir + "/log")
 	CreateDirIfNeeded(exp.OutputDir + "/cmd")
+}
+
+func WaitTcpPortAvailable(port uint16, onexit chan bool) {
+	available := false
+
+	for !available {
+		// Retrieve all TCP connections
+		con, err := net.Connections("tcp")
+		if err != nil {
+			log.Error("Cannot list open sockets")
+			break
+		}
+
+		// Is the port we seek used?
+		available = true
+		for _, elem := range con {
+			if elem.Laddr.Port == uint32(port) {
+				available = false
+			}
+		}
+	}
+
+	onexit <- true
 }
 
 // Execute a command, writing status result on a channel
@@ -317,11 +341,6 @@ func ExecuteOne(exp Experiment) int {
 		}).Warning("Batsim export prefix mismatches output directory")
 	}
 
-	// Create context (handles timeout)
-	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Duration(exp.SimulationTimeout)*time.Second)
-	defer cancel()
-
 	if exp.Schedcmd == "" {
 		// Only execute Batsim
 		if batargs.BatexecMode == false {
@@ -330,6 +349,11 @@ func ExecuteOne(exp Experiment) int {
 				"scheduler command": exp.Schedcmd,
 			}).Fatal("Sched command unset but Batsim is not in batexec mode")
 		}
+
+		// Create context (handles timeout)
+		ctx, cancel := context.WithTimeout(context.Background(),
+			time.Duration(exp.SimulationTimeout)*time.Second)
+		defer cancel()
 		return executeBatsimAlone(exp, ctx)
 	} else {
 		// Execute Batsim and the scheduler
@@ -339,6 +363,33 @@ func ExecuteOne(exp Experiment) int {
 				"scheduler command": exp.Schedcmd,
 			}).Fatal("Sched command set but Batsim is in batexec mode")
 		}
+		// Wait for socket to become available
+		port := PortFromBatSock(batargs.Socket, exp.Batcmd)
+
+		log.WithFields(log.Fields{
+			"socket timeout (seconds)":  exp.SocketTimeout,
+			"extracted port":            port,
+			"extracted socket endpoint": batargs.Socket,
+			"batsim command":            exp.Batcmd,
+		}).Info("Waiting socket availability")
+
+		okSock := make(chan bool)
+		go WaitTcpPortAvailable(port, okSock)
+		select {
+		case <-time.After(time.Duration(exp.SocketTimeout) * time.Second):
+			log.WithFields(log.Fields{
+				"socket timeout (seconds)":  exp.SuccessTimeout,
+				"extracted port":            port,
+				"extracted socket endpoint": batargs.Socket,
+				"batsim command":            exp.Batcmd,
+			}).Fatal("Socket is not available")
+		case <-okSock:
+		}
+
+		// Create context (handles timeout)
+		ctx, cancel := context.WithTimeout(context.Background(),
+			time.Duration(exp.SimulationTimeout)*time.Second)
+		defer cancel()
 		return executeBatsimAndSched(exp, ctx)
 	}
 
