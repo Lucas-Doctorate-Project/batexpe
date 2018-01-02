@@ -18,5 +18,6 @@ as many problems may rise:
 The main goal of this script is to facilitate the execution of one single
 simulation instance so it can be seen as a black box with inputs and outputs.
 
-The main idea behind this script is shown on the figure below:  
+## How does it work?
+The main idea behind Robin is shown on the figure below.
 ![robin main idea](doc/automata/smooth2.svg "Robin main idea")

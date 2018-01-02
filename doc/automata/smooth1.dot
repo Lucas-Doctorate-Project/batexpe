@@ -1,5 +1,6 @@
 digraph G {
     node [style=filled,fillcolor="#A5CEE3"];
+    ranksep="0.00001"
 
     subgraph cluster_1 {
         runbat [label="run Batsim"];
