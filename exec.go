@@ -2,7 +2,6 @@ package expe
 
 import (
 	"context"
-	"github.com/shirou/gopsutil/net"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
@@ -99,32 +98,6 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 			onexit <- 1
 			return
 		} else {
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
-}
-
-func waitTcpPortAvailablePsutil(port uint16, onexit chan int) {
-	for {
-		// Retrieve all TCP connections
-		con, err := net.Connections("tcp")
-		if err != nil {
-			log.Fatal("Cannot list open sockets via psutil")
-		}
-
-		// Is the port we seek used?
-		available := true
-		for _, elem := range con {
-			if elem.Laddr.Port == uint32(port) {
-				available = false
-			}
-		}
-
-		if available {
-			onexit <- 1
-			return
-		}
-		if !available {
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
