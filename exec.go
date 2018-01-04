@@ -70,7 +70,7 @@ func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) {
 }
 
 func waitNoConflictingBatsim(port uint16, onexit chan int) {
-	r := regexp.MustCompile(`(?m)^.*batsim\s+.*$`)
+	r := regexp.MustCompile(`(?m)\s*^[[:^blank:]]*batsim\s+.*$`)
 	for {
 		// Retrieve running Batsim processes
 		psCmd := exec.Command("ps")
