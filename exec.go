@@ -129,12 +129,13 @@ func waitTcpPortAvailableSs(port uint16, onexit chan int) {
 }
 
 // Execute a command, writing status result on a channel
-func executeInnerCtx(name string, cmdString string, logDir string,
+func executeInnerCtx(name, cmdString, cmdFile, logDir string,
 	cmd *exec.Cmd, ctx context.Context, onexit chan cmdFinishedMsg) {
 
 	log.WithFields(log.Fields{
-		"command": cmdString,
-		"context": ctx,
+		"command":      cmdString,
+		"command file": cmdFile,
+		"context":      ctx,
 	}).Debug("Starting " + name)
 
 	if err := cmd.Run(); err != nil {
@@ -142,6 +143,7 @@ func executeInnerCtx(name string, cmdString string, logDir string,
 			log.WithFields(log.Fields{
 				"err":           err,
 				"command":       cmdString,
+				"command  file": cmdFile,
 				"log directory": logDir,
 			}).Error(name + " execution failed (simulation timeout reached)")
 
@@ -150,6 +152,7 @@ func executeInnerCtx(name string, cmdString string, logDir string,
 			log.WithFields(log.Fields{
 				"err":           err,
 				"command":       cmdString,
+				"command file":  cmdFile,
 				"log directory": logDir,
 			}).Error(name + " execution failed")
 
@@ -161,6 +164,7 @@ func executeInnerCtx(name string, cmdString string, logDir string,
 	} else {
 		log.WithFields(log.Fields{
 			"command":       cmdString,
+			"command file":  cmdFile,
 			"log directory": logDir,
 		}).Info(name + " execution succeeded")
 
@@ -209,7 +213,8 @@ func executeBatsimAlone(exp Experiment, ctx context.Context) int {
 
 	// Execute the processes
 	termination := make(chan cmdFinishedMsg)
-	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/log/", cmd, ctx, termination)
+	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
+		exp.OutputDir+"/log/", cmd, ctx, termination)
 
 	// Guard against ctrl+c
 	sigint := make(chan os.Signal, 1)
@@ -301,8 +306,11 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context) int {
 
 	// Execute the processes
 	termination := make(chan cmdFinishedMsg)
-	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/log/", cmds["Batsim"], ctx, termination)
-	go executeInnerCtx("Scheduler", exp.Schedcmd, exp.OutputDir+"/log/", cmds["Scheduler"], ctx, termination)
+	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
+		exp.OutputDir+"/log/", cmds["Batsim"], ctx, termination)
+	go executeInnerCtx("Scheduler", exp.Schedcmd,
+		exp.OutputDir+"/cmd/sched.bash", exp.OutputDir+"/log/",
+		cmds["Scheduler"], ctx, termination)
 
 	// Guard against ctrl+c
 	sigint := make(chan os.Signal, 1)
