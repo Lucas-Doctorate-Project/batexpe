@@ -57,7 +57,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
 
 	if arguments["--simulation-timeout"] != nil {
 		exp.SimulationTimeout, err = strconv.ParseFloat(
-			arguments["--simulation-timeout"].(string))
+			arguments["--simulation-timeout"].(string), 64)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"err": err,
@@ -68,7 +68,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
 
 	if arguments["--ready-timeout"] != nil {
 		exp.ReadyTimeout, err = strconv.ParseFloat(
-			arguments["--ready-timeout"].(string))
+			arguments["--ready-timeout"].(string), 64)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"err":             err,
@@ -79,7 +79,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
 
 	if arguments["--success-timeout"] != nil {
 		exp.SuccessTimeout, err = strconv.ParseFloat(
-			arguments["--success-timeout"].(string))
+			arguments["--success-timeout"].(string), 64)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"err":               err,
@@ -90,7 +90,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
 
 	if arguments["--failure-timeout"] != nil {
 		exp.FailureTimeout, err = strconv.ParseFloat(
-			arguments["--failure-timeout"].(string))
+			arguments["--failure-timeout"].(string), 64)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"err":               err,
