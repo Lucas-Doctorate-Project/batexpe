@@ -56,7 +56,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) expe.Experiment {
 	}
 
 	if arguments["--simulation-timeout"] != nil {
-		exp.SimulationTimeout, err = strconv.Atoi(
+		exp.SimulationTimeout, err = strconv.ParseFloat(
 			arguments["--simulation-timeout"].(string))
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -67,7 +67,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) expe.Experiment {
 	}
 
 	if arguments["--ready-timeout"] != nil {
-		exp.ReadyTimeout, err = strconv.Atoi(
+		exp.ReadyTimeout, err = strconv.ParseFloat(
 			arguments["--ready-timeout"].(string))
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -78,7 +78,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) expe.Experiment {
 	}
 
 	if arguments["--success-timeout"] != nil {
-		exp.SuccessTimeout, err = strconv.Atoi(
+		exp.SuccessTimeout, err = strconv.ParseFloat(
 			arguments["--success-timeout"].(string))
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -89,7 +89,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) expe.Experiment {
 	}
 
 	if arguments["--failure-timeout"] != nil {
-		exp.FailureTimeout, err = strconv.Atoi(
+		exp.FailureTimeout, err = strconv.ParseFloat(
 			arguments["--failure-timeout"].(string))
 		if err != nil {
 			log.WithFields(log.Fields{

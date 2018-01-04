@@ -6,13 +6,13 @@ import (
 )
 
 type Experiment struct {
-	Batcmd            string `json:"batcmd"`
-	OutputDir         string `json:"output-dir"`
-	Schedcmd          string `json:"schedcmd"`
-	SimulationTimeout int    `json:"simulation-timeout"`
-	ReadyTimeout      int    `json:"ready-timeout"`
-	SuccessTimeout    int    `json:"success-timeout"`
-	FailureTimeout    int    `json:"failure-timeout"`
+	Batcmd            string  `json:"batcmd"`
+	OutputDir         string  `json:"output-dir"`
+	Schedcmd          string  `json:"schedcmd"`
+	SimulationTimeout float64 `json:"simulation-timeout"`
+	ReadyTimeout      float64 `json:"ready-timeout"`
+	SuccessTimeout    float64 `json:"success-timeout"`
+	FailureTimeout    float64 `json:"failure-timeout"`
 }
 
 func readStringFromDict(data map[string]interface{}, key string, yam string) string {
@@ -43,14 +43,14 @@ func readStringFromDict(data map[string]interface{}, key string, yam string) str
 	return ret
 }
 
-func readIntFromDict(data map[string]interface{}, key string, yam string) int {
-	ret := 0
+func readFloat64FromDict(data map[string]interface{}, key string, yam string) float64 {
+	ret := 0.0
 	if val, ok := data[key]; ok {
 		switch val.(type) {
 		case int:
-			ret = val.(int)
+			ret = float64(val.(int))
 		case float64:
-			ret = int(val.(float64))
+			ret = val.(float64)
 		default:
 			log.WithFields(log.Fields{
 				"yaml": yam,
@@ -90,10 +90,10 @@ func FromYaml(str string) Experiment {
 	expe.Batcmd = readStringFromDict(data, "batcmd", str)
 	expe.OutputDir = readStringFromDict(data, "output-dir", str)
 	expe.Schedcmd = readStringFromDict(data, "schedcmd", str)
-	expe.SimulationTimeout = readIntFromDict(data, "simulation-timeout", str)
-	expe.ReadyTimeout = readIntFromDict(data, "ready-timeout", str)
-	expe.SuccessTimeout = readIntFromDict(data, "success-timeout", str)
-	expe.FailureTimeout = readIntFromDict(data, "failure-timeout", str)
+	expe.SimulationTimeout = readFloat64FromDict(data, "simulation-timeout", str)
+	expe.ReadyTimeout = readFloat64FromDict(data, "ready-timeout", str)
+	expe.SuccessTimeout = readFloat64FromDict(data, "success-timeout", str)
+	expe.FailureTimeout = readFloat64FromDict(data, "failure-timeout", str)
 
 	log.WithFields(log.Fields{
 		"expe": expe,
