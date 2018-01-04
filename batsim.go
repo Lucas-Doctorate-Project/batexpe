@@ -12,7 +12,7 @@ type BatsimArgs struct {
 	BatexecMode  bool
 }
 
-func ParseBatsimCommand(batcmd string) BatsimArgs {
+func ParseBatsimCommand(batcmd string) (batargs BatsimArgs) {
 	batsimDocopt := `
 A tool to simulate (via SimGrid) the behaviour of scheduling algorithms.
 
@@ -125,7 +125,6 @@ Other options:
 		}).Fatal("Cannot parse Batsim command")
 	}
 
-	var batargs BatsimArgs
 	batargs.Socket = "tcp://localhost:28000"
 	batargs.ExportPrefix = "out"
 	batargs.BatexecMode = false

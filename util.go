@@ -19,7 +19,7 @@ func CreateDirIfNeeded(dir string) {
 	}
 }
 
-func max(x, y int) int {
+func max(x, y int) (maxVal int) {
 	if x > y {
 		return x
 	} else {
@@ -27,7 +27,7 @@ func max(x, y int) int {
 	}
 }
 
-func PortFromBatSock(socket, batcmd string) uint16 {
+func PortFromBatSock(socket, batcmd string) (port uint16) {
 	regexStr := `^.*:(?P<Port>\d+)$`
 	r := regexp.MustCompile(regexStr)
 	capture := r.FindStringSubmatch(socket)
@@ -40,7 +40,7 @@ func PortFromBatSock(socket, batcmd string) uint16 {
 		}).Fatal("Cannot retrieve port from batsim command")
 	}
 
-	port, err := strconv.Atoi(capture[1])
+	iport, err := strconv.Atoi(capture[1])
 	if err != nil {
 		log.WithFields(log.Fields{
 			"socket endpoint":  socket,
@@ -49,5 +49,5 @@ func PortFromBatSock(socket, batcmd string) uint16 {
 		}).Fatal("Cannot convert string to int")
 	}
 
-	return uint16(port)
+	return uint16(iport)
 }
