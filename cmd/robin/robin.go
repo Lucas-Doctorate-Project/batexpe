@@ -30,8 +30,8 @@ func setupLogging(arguments map[string]interface{}) {
 	}
 }
 
-func ExperimentFromArgs(arguments map[string]interface{}) expe.Experiment {
-	var exp expe.Experiment
+func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
+	var exp batexpe.Experiment
 	var err error
 
 	// Default values
@@ -109,7 +109,7 @@ func ExperimentFromArgs(arguments map[string]interface{}) expe.Experiment {
 
 func generateDescription(arguments map[string]interface{}) {
 	exp := ExperimentFromArgs(arguments)
-	yam := expe.ToYaml(exp)
+	yam := batexpe.ToYaml(exp)
 
 	fil := arguments["<description-file>"].(string)
 
@@ -202,7 +202,7 @@ Verbosity options:
 
 	// Execution mode.
 	// Read what should be executed
-	var exp expe.Experiment
+	var exp batexpe.Experiment
 	if arguments["<description-file>"] != nil {
 		fil := arguments["<description-file>"].(string)
 		byt, err := ioutil.ReadFile(fil)
@@ -213,7 +213,7 @@ Verbosity options:
 			}).Fatal("Cannot open description file")
 		}
 
-		exp = expe.FromYaml(string(byt))
+		exp = batexpe.FromYaml(string(byt))
 	} else {
 		exp = ExperimentFromArgs(arguments)
 	}
@@ -228,6 +228,6 @@ Verbosity options:
 		"failure timeout":    exp.FailureTimeout,
 	}).Debug("Instance description read")
 
-	ret := expe.ExecuteOne(exp)
+	ret := batexpe.ExecuteOne(exp)
 	os.Exit(ret)
 }
