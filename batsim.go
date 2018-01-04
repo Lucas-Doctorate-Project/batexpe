@@ -1,4 +1,4 @@
-package expe
+package batexpe
 
 import (
 	"github.com/anmitsu/go-shlex"

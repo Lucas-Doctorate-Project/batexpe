@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/batsim/expe"
+	"github.com/batsim/batexpe"
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
