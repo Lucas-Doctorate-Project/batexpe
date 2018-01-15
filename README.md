@@ -1,9 +1,9 @@
 This repository contains a set of Go tools around
-[Batsim](https://github.com/oar-team/batsim) to simplify experiments.
+[Batsim](https://gitlab.inria.fr/batsim/batsim) to simplify experiments.
 
 ## Install
 ```bash
-go get github.com/batsim/batexpe/cmd/robin
+go get gitlab.inria.fr/batsim/batexpe/cmd/robin
 ```
 
 ## Links to subprojects
