@@ -2,7 +2,12 @@
 All notable changes to this project will be documented in this file.  
 The format is based on [Keep a Changelog][changelog].
 
-Robin adheres to [Semantic Versioning][semver].  
+Batexpe and all the programs it includes adhere to [Semantic Versioning][semver].  
+All the programs share the same version number.
+
+As Batexpe is a library, its public API includes:
+- The API of the public functions.
+
 Robin's public API includes:
 - The Robin's command-line interface.
 - The Robin input file format.
