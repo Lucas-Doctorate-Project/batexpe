@@ -27,13 +27,40 @@ type cmdFinishedMsg struct {
 
 func PrepareDirs(exp Experiment) {
 	// Create output directory if needed
-	CreateDirIfNeeded(exp.OutputDir)
-	CreateDirIfNeeded(exp.OutputDir + "/log")
-	CreateDirIfNeeded(exp.OutputDir + "/cmd")
+	err := CreateDirIfNeeded(exp.OutputDir)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"directory": exp.OutputDir,
+			"err":       err,
+		}).Fatal("Cannot create output directory")
+	}
+
+	err = CreateDirIfNeeded(exp.OutputDir + "/log")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"directory": exp.OutputDir + "/log",
+			"err":       err,
+		}).Fatal("Cannot create log directory")
+	}
+
+	err = CreateDirIfNeeded(exp.OutputDir + "/cmd")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"directory": exp.OutputDir + "/cmd",
+			"err":       err,
+		}).Fatal("Cannot create command directory")
+	}
 }
 
 func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) {
-	port := PortFromBatSock(batargs.Socket, exp.Batcmd)
+	port, err := PortFromBatSock(batargs.Socket)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+			"extracted socket endpoint": batargs.Socket,
+			"batsim command":            exp.Batcmd,
+		}).Fatal("Cannot retrieve port from Batsim socket")
+	}
 
 	log.WithFields(log.Fields{
 		"ready timeout (seconds)":   exp.ReadyTimeout,
@@ -86,8 +113,22 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 
 		conflict := false
 		for _, batcmd := range r.FindAllString(string(outBuf), -1) {
-			batargs := ParseBatsimCommand(batcmd)
-			lineport := PortFromBatSock(batargs.Socket, batcmd)
+			batargs, err := ParseBatsimCommand(batcmd)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"command": batcmd,
+					"err":     err,
+				}).Fatal("Cannot retrieve information from a running Batsim process command")
+			}
+
+			lineport, err := PortFromBatSock(batargs.Socket)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err": err,
+					"extracted socket endpoint": batargs.Socket,
+					"batsim command":            batcmd,
+				}).Fatal("Cannot retrieve port from a running Batsim process command")
+			}
 
 			if lineport == port {
 				conflict = true
@@ -416,7 +457,13 @@ func ExecuteOne(exp Experiment) int {
 	}
 
 	// Parse batsim command
-	batargs := ParseBatsimCommand(exp.Batcmd)
+	batargs, err := ParseBatsimCommand(exp.Batcmd)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"command": exp.Batcmd,
+			"err":     err,
+		}).Fatal("Cannot retrieve information from Batsim command")
+	}
 
 	if !strings.HasPrefix(batargs.ExportPrefix, exp.OutputDir) {
 		log.WithFields(log.Fields{
