@@ -194,7 +194,8 @@ Verbosity options:
   --quiet                       Only print critical information.
   --verbose                     Print information. Default verbosity mode.
   --debug                       Print debug information.
-  --json-logs                   Print information in JSON.`
+  --json-logs                   Print information in JSON.
+  --preview-on-error            Preview stdout and stderr of failed processes.`
 
 	arguments, _ := docopt.Parse(usage, nil, true, "0.1.0", false)
 	previewOnError := setupLogging(arguments)
