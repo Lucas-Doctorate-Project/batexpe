@@ -223,8 +223,8 @@ func logExecuteInnerCtxError(errMsg string, err error,
 
 // Execute a command, writing status result on a channel
 func executeInnerCtx(name, cmdString, cmdFile, stdoutFile, stderrFile string,
-	cmd *exec.Cmd, ctx context.Context, onexit chan cmdFinishedMsg,
-	previewOnError bool) {
+	cmd *exec.Cmd, ctx context.Context, onstart chan string,
+	onexit chan cmdFinishedMsg, previewOnError bool) {
 
 	log.WithFields(log.Fields{
 		"command":      cmdString,
@@ -245,6 +245,7 @@ func executeInnerCtx(name, cmdString, cmdFile, stdoutFile, stderrFile string,
 		// Kill command's subprocesses (cf. https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773)
 		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}()
+	onstart <- name
 
 	// Wait until command completion (or context timeout)
 	if err := cmd.Wait(); err != nil {
@@ -305,10 +306,12 @@ func executeBatsimAlone(exp Experiment, ctx context.Context,
 	cmd.Stderr = batlog
 
 	// Execute the processes
+	pidsToKill := map[string]int{}
+	start := make(chan string)
 	termination := make(chan cmdFinishedMsg)
 	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
-		"/dev/null", exp.OutputDir+"/log/batsim.log", cmd, ctx, termination,
-		previewOnError)
+		"/dev/null", exp.OutputDir+"/log/batsim.log", cmd, ctx, start,
+		termination, previewOnError)
 
 	// Guard against ctrl+c
 	sigint := make(chan os.Signal, 1)
@@ -316,13 +319,26 @@ func executeBatsimAlone(exp Experiment, ctx context.Context,
 	go func() {
 		<-sigint
 
-		log.WithFields(log.Fields{
-			"Batsim cmd": cmd,
-		}).Warn("SIGTERM received. Killing subprocesses.")
-
-		syscall.Kill(cmd.Process.Pid, syscall.SIGKILL)
+		log.Warn("SIGTERM received. Killing remaining subprocesses.")
+		for name, pid := range pidsToKill {
+			log.WithFields(log.Fields{
+				"name": name,
+				"pid":  pid,
+			}).Warn("Killing process.")
+			syscall.Kill(pid, syscall.SIGKILL)
+		}
 		os.Exit(3)
 	}()
+
+	for {
+		select {
+		case <-start:
+			pidsToKill["Batsim"] = cmd.Process.Pid
+		case finish1 := <-termination:
+			delete(pidsToKill, "Batsim")
+			return finish1.state
+		}
+	}
 
 	// Wait for completion
 	finish1 := <-termination
@@ -400,14 +416,16 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 	cmds["Scheduler"].Stderr = schederr
 
 	// Execute the processes
+	pidsToKill := map[string]int{}
+	start := make(chan string)
 	termination := make(chan cmdFinishedMsg)
 	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
 		"/dev/null", exp.OutputDir+"/log/batsim.log",
-		cmds["Batsim"], ctx, termination, previewOnError)
+		cmds["Batsim"], ctx, start, termination, previewOnError)
 	go executeInnerCtx("Scheduler", exp.Schedcmd,
 		exp.OutputDir+"/cmd/sched.bash",
 		exp.OutputDir+"/log/sched.out.log", exp.OutputDir+"/log/sched.err.log",
-		cmds["Scheduler"], ctx, termination, previewOnError)
+		cmds["Scheduler"], ctx, start, termination, previewOnError)
 
 	// Guard against ctrl+c
 	sigint := make(chan os.Signal, 1)
@@ -415,19 +433,31 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 	go func() {
 		<-sigint
 
-		log.WithFields(log.Fields{
-			"Batsim cmd":    cmds["Batsim"],
-			"Scheduler cmd": cmds["Scheduler"],
-		}).Warn("SIGTERM received. Killing subprocesses.")
-
-		syscall.Kill(-cmds["Batsim"].Process.Pid, syscall.SIGKILL)
-		syscall.Kill(-cmds["Scheduler"].Process.Pid, syscall.SIGKILL)
+		log.Warn("SIGTERM received. Killing remaining subprocesses.")
+		for name, pid := range pidsToKill {
+			log.WithFields(log.Fields{
+				"name": name,
+				"pid":  pid,
+			}).Warn("Killing process.")
+			syscall.Kill(pid, syscall.SIGKILL)
+		}
 		os.Exit(3)
 	}()
 
+	oneFinished := false
+	var finish1 cmdFinishedMsg
+
+	for !oneFinished {
+		select {
+		case name := <-start:
+			pidsToKill[name] = cmds[name].Process.Pid
+		case finish1 = <-termination:
+			delete(pidsToKill, finish1.name)
+			success[finish1.name] = finish1.state
+			oneFinished = true
+		}
+	}
 	// Wait for first process to finish
-	finish1 := <-termination
-	success[finish1.name] = finish1.state
 
 	log.WithFields(log.Fields{
 		"name":  finish1.name,
@@ -458,10 +488,14 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 
 			// Wait second process completion
 			finish2 := <-termination
+			delete(pidsToKill, finish2.name)
 			success[finish2.name] = finish2.state
-
+		case name := <-start:
+			// Second process started
+			pidsToKill[name] = cmds[name].Process.Pid
 		case finish2 := <-termination:
 			// Second process finished
+			delete(pidsToKill, finish2.name)
 			success[finish2.name] = finish2.state
 		}
 	case FAILURE:
@@ -487,15 +521,20 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 
 			// Wait second process completion
 			finish2 := <-termination
+			delete(pidsToKill, finish2.name)
 			success[finish2.name] = finish2.state
-
+		case name := <-start:
+			// Second process started
+			pidsToKill[name] = cmds[name].Process.Pid
 		case finish2 := <-termination:
 			// Second process finished
+			delete(pidsToKill, finish2.name)
 			success[finish2.name] = finish2.state
 		}
 	case TIMEOUT:
 		// Wait second process completion
 		finish2 := <-termination
+		delete(pidsToKill, finish2.name)
 		success[finish2.name] = finish2.state
 	}
 
