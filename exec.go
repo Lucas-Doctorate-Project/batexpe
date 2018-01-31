@@ -170,6 +170,57 @@ func waitTcpPortAvailableSs(port uint16, onexit chan int) {
 	}
 }
 
+func logExecuteInnerCtxError(errMsg string, err error,
+	name, cmdString, cmdFile, stdoutFile, stderrFile string,
+	cmd *exec.Cmd, ctx context.Context, previewOnError bool) (status int) {
+	status = FAILURE
+
+	if ctx.Err() != nil {
+		errMsg = errMsg + " (simulation timeout reached)"
+		status = TIMEOUT
+	}
+
+	log.WithFields(log.Fields{
+		"err":          err,
+		"command":      cmdString,
+		"command file": cmdFile,
+		"stdout file":  stdoutFile,
+		"stderr file":  stderrFile,
+	}).Error(errMsg)
+
+	// If the option is set, preview simulation logs to stdout
+	if previewOnError {
+		var linesToPreview int64 = 20
+		// Preview stdout log unless set to /dev/null (batsim process)
+		if stdoutFile != "/dev/null" {
+			outPreview, err := PreviewFile(stdoutFile, linesToPreview)
+			if err == nil {
+				if outPreview != "" {
+					fmt.Printf("\nContent of %s's stdout log:\n%s\n",
+						name, outPreview)
+				}
+			} else {
+				fmt.Printf("Cannot read %s's stdout log (err=%s)",
+					name, err.Error())
+			}
+		}
+
+		// Preview stderr
+		errPreview, err := PreviewFile(stderrFile, linesToPreview)
+		if err == nil {
+			if errPreview != "" {
+				fmt.Printf("\nContent of %s's stderr log:\n%s\n",
+					name, errPreview)
+			}
+		} else {
+			fmt.Printf("Cannot read %s's stderr log (err=%s)",
+				name, err.Error())
+		}
+	}
+
+	return status
+}
+
 // Execute a command, writing status result on a channel
 func executeInnerCtx(name, cmdString, cmdFile, stdoutFile, stderrFile string,
 	cmd *exec.Cmd, ctx context.Context, onexit chan cmdFinishedMsg,
@@ -181,56 +232,25 @@ func executeInnerCtx(name, cmdString, cmdFile, stdoutFile, stderrFile string,
 		"context":      ctx,
 	}).Debug("Starting " + name)
 
-	if err := cmd.Run(); err != nil {
-		errMsg := name + " execution failed"
-		status := FAILURE
+	if err := cmd.Start(); err != nil {
+		// Start failed
+		status := logExecuteInnerCtxError(name+" start failed", err,
+			name, cmdString, cmdFile, stdoutFile, stderrFile, cmd, ctx,
+			previewOnError)
+		onexit <- cmdFinishedMsg{name, status}
+	}
 
-		if ctx.Err() != nil {
-			errMsg = errMsg + " (simulation timeout reached)"
-			status = TIMEOUT
-		}
-
-		log.WithFields(log.Fields{
-			"err":          err,
-			"command":      cmdString,
-			"command file": cmdFile,
-			"stdout file":  stdoutFile,
-			"stderr file":  stderrFile,
-		}).Error(errMsg)
-
-		// If the option is set, preview simulation logs to stdout
-		if previewOnError {
-			var linesToPreview int64 = 20
-			// Preview stdout log unless set to /dev/null (batsim process)
-			if stdoutFile != "/dev/null" {
-				outPreview, err := PreviewFile(stdoutFile, linesToPreview)
-				if err == nil {
-					if outPreview != "" {
-						fmt.Printf("\nContent of %s's stdout log:\n%s\n",
-							name, outPreview)
-					}
-				} else {
-					fmt.Printf("Cannot read %s's stdout log (err=%s)",
-						name, err.Error())
-				}
-			}
-
-			// Preview stderr
-			errPreview, err := PreviewFile(stderrFile, linesToPreview)
-			if err == nil {
-				if errPreview != "" {
-					fmt.Printf("\nContent of %s's stderr log:\n%s\n",
-						name, errPreview)
-				}
-			} else {
-				fmt.Printf("Cannot read %s's stderr log (err=%s)",
-					name, err.Error())
-			}
-		}
-
+	// Start succeeded
+	defer func() {
 		// Kill command's subprocesses (cf. https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773)
 		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}()
 
+	// Wait until command completion (or context timeout)
+	if err := cmd.Wait(); err != nil {
+		status := logExecuteInnerCtxError(name+" execution failed", err,
+			name, cmdString, cmdFile, stdoutFile, stderrFile, cmd, ctx,
+			previewOnError)
 		onexit <- cmdFinishedMsg{name, status}
 	} else {
 		log.WithFields(log.Fields{
