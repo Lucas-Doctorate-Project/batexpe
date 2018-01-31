@@ -197,7 +197,7 @@ Verbosity options:
   --json-logs                   Print information in JSON.
   --preview-on-error            Preview stdout and stderr of failed processes.`
 
-	arguments, _ := docopt.Parse(usage, nil, true, "0.1.0", false)
+	arguments, _ := docopt.Parse(usage, nil, true, batexpe.Version(), false)
 	previewOnError := setupLogging(arguments)
 
 	log.WithFields(log.Fields{
