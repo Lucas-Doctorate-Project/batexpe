@@ -1,15 +1,15 @@
 package main
 
 import (
-	"gitlab.inria.fr/batsim/batexpe"
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
+	"gitlab.inria.fr/batsim/batexpe"
 	"io/ioutil"
 	"os"
 	"strconv"
 )
 
-func setupLogging(arguments map[string]interface{}) {
+func setupLogging(arguments map[string]interface{}) (previewOnError bool) {
 	log.SetOutput(os.Stdout)
 
 	if arguments["--json-logs"] == true {
@@ -18,6 +18,7 @@ func setupLogging(arguments map[string]interface{}) {
 		customFormatter := new(log.TextFormatter)
 		customFormatter.TimestampFormat = "2006-01-02 15:04:05.000"
 		customFormatter.FullTimestamp = true
+		customFormatter.QuoteEmptyFields = true
 		log.SetFormatter(customFormatter)
 	}
 
@@ -28,6 +29,13 @@ func setupLogging(arguments map[string]interface{}) {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
+
+	previewOnError = false
+	if arguments["--preview-on-error"] == true {
+		previewOnError = true
+	}
+
+	return previewOnError
 }
 
 func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
@@ -133,9 +141,9 @@ Usage:
         [--ready-timeout=<time>]
         [--success-timeout=<time>]
         [--failure-timeout=<time>]
-        [(--verbose | --quiet | --debug)] [--json-logs]
+        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
   robin <description-file>
-        [(--verbose | --quiet | --debug)] [--json-logs]
+        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
   robin generate <description-file>
         [--output-dir=<dir>]
         [--batcmd=<batsim-command>]
@@ -144,7 +152,7 @@ Usage:
         [--ready-timeout=<time>]
         [--success-timeout=<time>]
         [--failure-timeout=<time>]
-        [(--verbose | --quiet | --debug)] [--json-logs]
+        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
   robin -h | --help
   robin --version
 
@@ -189,7 +197,7 @@ Verbosity options:
   --json-logs                   Print information in JSON.`
 
 	arguments, _ := docopt.Parse(usage, nil, true, "0.1.0", false)
-	setupLogging(arguments)
+	previewOnError := setupLogging(arguments)
 
 	log.WithFields(log.Fields{
 		"args": arguments,
@@ -228,6 +236,6 @@ Verbosity options:
 		"failure timeout":    exp.FailureTimeout,
 	}).Debug("Instance description read")
 
-	ret := batexpe.ExecuteOne(exp)
+	ret := batexpe.ExecuteOne(exp, previewOnError)
 	os.Exit(ret)
 }

@@ -2,6 +2,7 @@ package batexpe
 
 import (
 	"context"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
@@ -170,8 +171,9 @@ func waitTcpPortAvailableSs(port uint16, onexit chan int) {
 }
 
 // Execute a command, writing status result on a channel
-func executeInnerCtx(name, cmdString, cmdFile, logDir string,
-	cmd *exec.Cmd, ctx context.Context, onexit chan cmdFinishedMsg) {
+func executeInnerCtx(name, cmdString, cmdFile, stdoutFile, stderrFile string,
+	cmd *exec.Cmd, ctx context.Context, onexit chan cmdFinishedMsg,
+	previewOnError bool) {
 
 	log.WithFields(log.Fields{
 		"command":      cmdString,
@@ -180,33 +182,62 @@ func executeInnerCtx(name, cmdString, cmdFile, logDir string,
 	}).Debug("Starting " + name)
 
 	if err := cmd.Run(); err != nil {
+		errMsg := name + " execution failed"
+		status := FAILURE
+
 		if ctx.Err() != nil {
-			log.WithFields(log.Fields{
-				"err":           err,
-				"command":       cmdString,
-				"command  file": cmdFile,
-				"log directory": logDir,
-			}).Error(name + " execution failed (simulation timeout reached)")
+			errMsg = errMsg + " (simulation timeout reached)"
+			status = TIMEOUT
+		}
 
-			onexit <- cmdFinishedMsg{name, TIMEOUT}
-		} else {
-			log.WithFields(log.Fields{
-				"err":           err,
-				"command":       cmdString,
-				"command file":  cmdFile,
-				"log directory": logDir,
-			}).Error(name + " execution failed")
+		log.WithFields(log.Fields{
+			"err":          err,
+			"command":      cmdString,
+			"command file": cmdFile,
+			"stdout file":  stdoutFile,
+			"stderr file":  stderrFile,
+		}).Error(errMsg)
 
-			onexit <- cmdFinishedMsg{name, FAILURE}
+		// If the option is set, preview simulation logs to stdout
+		if previewOnError {
+			var linesToPreview int64 = 20
+			// Preview stdout log unless set to /dev/null (batsim process)
+			if stdoutFile != "/dev/null" {
+				outPreview, err := PreviewFile(stdoutFile, linesToPreview)
+				if err == nil {
+					if outPreview != "" {
+						fmt.Printf("\nContent of %s's stdout log:\n%s\n",
+							name, outPreview)
+					}
+				} else {
+					fmt.Printf("Cannot read %s's stdout log (err=%s)",
+						name, err.Error())
+				}
+			}
+
+			// Preview stderr
+			errPreview, err := PreviewFile(stderrFile, linesToPreview)
+			if err == nil {
+				if errPreview != "" {
+					fmt.Printf("\nContent of %s's stderr log:\n%s\n",
+						name, errPreview)
+				}
+			} else {
+				fmt.Printf("Cannot read %s's stderr log (err=%s)",
+					name, err.Error())
+			}
 		}
 
 		// Kill command's subprocesses (cf. https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773)
 		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+
+		onexit <- cmdFinishedMsg{name, status}
 	} else {
 		log.WithFields(log.Fields{
-			"command":       cmdString,
-			"command file":  cmdFile,
-			"log directory": logDir,
+			"command":      cmdString,
+			"command file": cmdFile,
+			"stdout file":  stdoutFile,
+			"stderr file":  stderrFile,
 		}).Info(name + " execution succeeded")
 
 		onexit <- cmdFinishedMsg{name, SUCCESS}
@@ -222,7 +253,8 @@ func oppName(str string) string {
 	}
 }
 
-func executeBatsimAlone(exp Experiment, ctx context.Context) int {
+func executeBatsimAlone(exp Experiment, ctx context.Context,
+	previewOnError bool) int {
 	log.WithFields(log.Fields{
 		"simulation timeout (seconds)": exp.SimulationTimeout,
 		"batsim command":               exp.Batcmd,
@@ -255,7 +287,8 @@ func executeBatsimAlone(exp Experiment, ctx context.Context) int {
 	// Execute the processes
 	termination := make(chan cmdFinishedMsg)
 	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
-		exp.OutputDir+"/log/", cmd, ctx, termination)
+		"/dev/null", exp.OutputDir+"/log/batsim.log", cmd, ctx, termination,
+		previewOnError)
 
 	// Guard against ctrl+c
 	sigint := make(chan os.Signal, 1)
@@ -276,7 +309,8 @@ func executeBatsimAlone(exp Experiment, ctx context.Context) int {
 	return finish1.state
 }
 
-func executeBatsimAndSched(exp Experiment, ctx context.Context) int {
+func executeBatsimAndSched(exp Experiment, ctx context.Context,
+	previewOnError bool) int {
 	log.WithFields(log.Fields{
 		"simulation timeout (seconds)": exp.SimulationTimeout,
 		"batsim command":               exp.Batcmd,
@@ -348,10 +382,12 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context) int {
 	// Execute the processes
 	termination := make(chan cmdFinishedMsg)
 	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
-		exp.OutputDir+"/log/", cmds["Batsim"], ctx, termination)
+		"/dev/null", exp.OutputDir+"/log/batsim.log",
+		cmds["Batsim"], ctx, termination, previewOnError)
 	go executeInnerCtx("Scheduler", exp.Schedcmd,
-		exp.OutputDir+"/cmd/sched.bash", exp.OutputDir+"/log/",
-		cmds["Scheduler"], ctx, termination)
+		exp.OutputDir+"/cmd/sched.bash",
+		exp.OutputDir+"/log/sched.out.log", exp.OutputDir+"/log/sched.err.log",
+		cmds["Scheduler"], ctx, termination, previewOnError)
 
 	// Guard against ctrl+c
 	sigint := make(chan os.Signal, 1)
@@ -447,7 +483,7 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context) int {
 }
 
 // Execute one Batsim simulation
-func ExecuteOne(exp Experiment) int {
+func ExecuteOne(exp Experiment, previewOnError bool) int {
 	// Prepare execution
 	PrepareDirs(exp)
 
@@ -486,7 +522,7 @@ func ExecuteOne(exp Experiment) int {
 		ctx, cancel := context.WithTimeout(context.Background(),
 			time.Duration(exp.SimulationTimeout)*time.Second)
 		defer cancel()
-		return executeBatsimAlone(exp, ctx)
+		return executeBatsimAlone(exp, ctx, previewOnError)
 	} else {
 		// Execute Batsim and the scheduler
 		if batargs.BatexecMode == true {
@@ -503,7 +539,7 @@ func ExecuteOne(exp Experiment) int {
 		ctx, cancel := context.WithTimeout(context.Background(),
 			time.Duration(exp.SimulationTimeout)*time.Second)
 		defer cancel()
-		return executeBatsimAndSched(exp, ctx)
+		return executeBatsimAndSched(exp, ctx, previewOnError)
 	}
 
 	return -1

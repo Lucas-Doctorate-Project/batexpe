@@ -96,7 +96,7 @@ func PreviewFile(filename string, maxLines int64) (preview string, err error) {
 				string(maxLines/2), filename)
 		}
 
-		return fmt.Sprintf("%s\n...\n...\n"+
+		return fmt.Sprintf("%s...\n...\n"+
 			"... (truncated... whole log in '%s')\n...\n...\n%s",
 			string(headOut), filename, string(tailOut)), nil
 	}
