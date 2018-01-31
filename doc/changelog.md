@@ -22,6 +22,8 @@ Robin's public API includes:
 
 ### Fixed
 - Regex to find running Batsim processes was bad.
+- Typing ctrl+C too fast or setting very low timeouts caused segmentation fault
+  when killing processes. This should now be fixed.
 
 [//]: ==========================================================================
 ## 0.1.0 - 2018-01-22
