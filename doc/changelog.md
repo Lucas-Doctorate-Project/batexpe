@@ -14,6 +14,14 @@ Robin's public API includes:
 
 [//]: ==========================================================================
 ## [Unreleased]
+### Added
+- New command-line option '--preview-on-error'.  
+  If set, robin prints a preview of a process's stdout and stderr on error.  
+  This option cannot be set together with `--json-logs`,
+  as it directly prints to robin's stdout.
+
+### Fixed
+- Regex to find running Batsim processes was bad.
 
 [//]: ==========================================================================
 ## 0.1.0 - 2018-01-22
