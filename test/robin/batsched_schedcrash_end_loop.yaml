@@ -1,0 +1,7 @@
+batcmd: batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsched_ok/out
+output-dir: /tmp/robin/batsched_ok
+schedcmd: "batsched -v crasher --variant_options '{\"crash_type\": \"infinite_loop\", \"crash_on_end\": true}'"
+simulation-timeout: 5
+ready-timeout: 5
+success-timeout: 1
+failure-timeout: 1
