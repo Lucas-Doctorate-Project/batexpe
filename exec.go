@@ -319,13 +319,13 @@ func executeBatsimAlone(exp Experiment, ctx context.Context,
 	go func() {
 		<-sigint
 
-		log.Warn("SIGTERM received. Killing remaining subprocesses.")
+		log.Warn("SIGINT received. Killing remaining subprocesses.")
 		for name, pid := range pidsToKill {
 			log.WithFields(log.Fields{
 				"name": name,
 				"pid":  pid,
 			}).Warn("Killing process.")
-			syscall.Kill(pid, syscall.SIGKILL)
+			syscall.Kill(-pid, syscall.SIGKILL)
 		}
 		os.Exit(3)
 	}()
@@ -433,13 +433,13 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 	go func() {
 		<-sigint
 
-		log.Warn("SIGTERM received. Killing remaining subprocesses.")
+		log.Warn("SIGINT received. Killing remaining subprocesses.")
 		for name, pid := range pidsToKill {
 			log.WithFields(log.Fields{
 				"name": name,
 				"pid":  pid,
 			}).Warn("Killing process.")
-			syscall.Kill(pid, syscall.SIGKILL)
+			syscall.Kill(-pid, syscall.SIGKILL)
 		}
 		os.Exit(3)
 	}()
