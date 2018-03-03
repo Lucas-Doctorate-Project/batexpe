@@ -1,0 +1,49 @@
+image: oarteam/robin_ci
+
+###############################################################################
+# Variables
+###############################################################################
+variables:
+  GIT_SUBMODULE_STRATEGY: none
+  REPO_NAME: gitlab.inria.fr/batsim/batexpe
+  GO_PATH: /root/go
+
+###############################################################################
+# Before script
+###############################################################################
+before_script:
+  - export PATH="${PATH}:${CI_PROJECT_DIR}/artifacts"
+
+###############################################################################
+# Build stage
+###############################################################################
+build:
+  stage: build
+  script:
+    # Put batexpe source in the go source tree (so vendoring works as expected)
+    - mkdir -p ${GO_PATH}/src/${REPO_NAME}
+    - mv ${CI_PROJECT_DIR}/* ${GO_PATH}/src/${REPO_NAME}
+    - cd ${GO_PATH}/src/${REPO_NAME}
+    # Go dependencies
+    - go get .
+    # Prepare artifacts
+    - mkdir -p ${CI_PROJECT_DIR}/artifacts
+    # Build robin
+    - go build -o ${CI_PROJECT_DIR}/artifacts/robin ./cmd/robin
+  artifacts:
+    paths:
+      - ${CI_PROJECT_DIR}/artifacts/robin
+
+###############################################################################
+# Test stage
+###############################################################################
+test_cli:
+  stage: test
+  script:
+    
+    - ${CI_PROJECT_DIR}/artifacts/robin --help
+    - robin --help
+    - robin -h
+    - robin --version
+  dependencies:
+    - build
