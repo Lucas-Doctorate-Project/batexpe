@@ -51,7 +51,7 @@ test_should_pass:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - robin batsim_nosched_ok.yaml --quiet | jq
-    - robin batsched_ok.yaml --quiet | jq
+    - "robin batsim_nosched_ok.yaml --quiet | jq"
+    - "robin batsched_ok.yaml --quiet | jq"
   dependencies:
     - build
