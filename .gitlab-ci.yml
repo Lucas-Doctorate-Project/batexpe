@@ -14,6 +14,9 @@ variables:
 ###############################################################################
 before_script:
   - export PATH="${CI_PROJECT_DIR}/artifacts:${PATH}"
+  - >-
+    git clone --branch v2.0.0 --depth 1 --single-branch
+    https://gitlab.inria.fr/batsim/batsim.git ${BATSIM_DIR}
 
 ###############################################################################
 # Build stage
@@ -38,11 +41,20 @@ build:
 ###############################################################################
 # Test stage
 ###############################################################################
-test_cli:
+cli:
   stage: test
   script:
     - robin --version
     - robin --help
     - robin -h
+  dependencies:
+    - build
+
+test_should_pass:
+  stage: test
+  script:
+    - cd ${CI_PROJECT_DIR}/test/robin
+    - robin batsim_nosched_ok.yaml
+    - robin batsched_ok.yaml
   dependencies:
     - build
