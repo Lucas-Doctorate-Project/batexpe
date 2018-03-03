@@ -51,7 +51,7 @@ test_should_pass:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - robin batsim_nosched_ok.yaml --preview-on-error
-    - robin batsched_ok.yaml --preview-on-error
+    - robin batsim_nosched_ok.yaml --json
+    - robin batsched_ok.yaml --json
   dependencies:
     - build
