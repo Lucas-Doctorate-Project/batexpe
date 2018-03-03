@@ -14,9 +14,6 @@ variables:
 ###############################################################################
 before_script:
   - export PATH="${CI_PROJECT_DIR}/artifacts:${PATH}"
-  - >-
-    git clone --branch v2.0.0 --depth 1 --single-branch
-    https://gitlab.inria.fr/batsim/batsim.git ${BATSIM_DIR}
 
 ###############################################################################
 # Build stage
