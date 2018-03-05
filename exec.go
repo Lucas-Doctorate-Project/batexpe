@@ -181,6 +181,7 @@ func logExecuteInnerCtxError(errMsg string, err error,
 	}
 
 	log.WithFields(log.Fields{
+		"process name": name,
 		"err":          err,
 		"command":      cmdString,
 		"command file": cmdFile,
@@ -227,14 +228,15 @@ func executeInnerCtx(name, cmdString, cmdFile, stdoutFile, stderrFile string,
 	onexit chan cmdFinishedMsg, previewOnError bool) {
 
 	log.WithFields(log.Fields{
+		"process name": name,
 		"command":      cmdString,
 		"command file": cmdFile,
 		"context":      ctx,
-	}).Debug("Starting " + name)
+	}).Debug("Starting simulation subprocess")
 
 	if err := cmd.Start(); err != nil {
 		// Start failed
-		status := logExecuteInnerCtxError(name+" start failed", err,
+		status := logExecuteInnerCtxError("Could not start simulation subprocess", err,
 			name, cmdString, cmdFile, stdoutFile, stderrFile, cmd, ctx,
 			previewOnError)
 		onexit <- cmdFinishedMsg{name, status}
@@ -249,17 +251,18 @@ func executeInnerCtx(name, cmdString, cmdFile, stdoutFile, stderrFile string,
 
 	// Wait until command completion (or context timeout)
 	if err := cmd.Wait(); err != nil {
-		status := logExecuteInnerCtxError(name+" execution failed", err,
+		status := logExecuteInnerCtxError("Simulation subprocess failed", err,
 			name, cmdString, cmdFile, stdoutFile, stderrFile, cmd, ctx,
 			previewOnError)
 		onexit <- cmdFinishedMsg{name, status}
 	} else {
 		log.WithFields(log.Fields{
+			"process name": name,
 			"command":      cmdString,
 			"command file": cmdFile,
 			"stdout file":  stdoutFile,
 			"stderr file":  stderrFile,
-		}).Info(name + " execution succeeded")
+		}).Info("Simulation subprocess succeeded")
 
 		onexit <- cmdFinishedMsg{name, SUCCESS}
 	}
@@ -281,7 +284,7 @@ func executeBatsimAlone(exp Experiment, ctx context.Context,
 		"batsim command":               exp.Batcmd,
 		"batsim cmdfile":               exp.OutputDir + "/cmd/batsim.bash",
 		"batsim logfile":               exp.OutputDir + "/log/batsim.log",
-	}).Info("Running Batsim")
+	}).Info("Starting simulation")
 
 	// Create command
 	err := ioutil.WriteFile(exp.OutputDir+"/cmd/batsim.bash", []byte(exp.Batcmd), 0755)
@@ -356,7 +359,7 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 		"scheduler cmdfile":            exp.OutputDir + "/cmd/sched.bash",
 		"scheduler logfile (out)":      exp.OutputDir + "/log/sched.out.log",
 		"scheduler logfile (err)":      exp.OutputDir + "/log/sched.err.log",
-	}).Info("Running Batsim and Scheduler")
+	}).Info("Starting simulation")
 
 	// Create commands
 	cmds := make(map[string]*exec.Cmd)
@@ -468,8 +471,8 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 	case SUCCESS:
 		log.WithFields(log.Fields{
 			"success timeout (seconds)": exp.SuccessTimeout,
-			"potential victim":          oppName(finish1.name),
-		}).Info(oppName(finish1.name) + " may be killed soon...")
+			"potential victim name":     oppName(finish1.name),
+		}).Info("The second process might be killed soon...")
 
 		select {
 		case <-time.After(time.Duration(exp.SuccessTimeout) * time.Second):
@@ -481,9 +484,9 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 			// Kill the other process
 			if err := cmds[oppName(finish1.name)].Process.Kill(); err != nil {
 				log.WithFields(log.Fields{
-					"name": oppName(finish1.name),
-					"err":  err,
-				}).Error("Failed to kill")
+					"victim": oppName(finish1.name),
+					"err":    err,
+				}).Error("Failed to kill the second process")
 			}
 
 			// Wait second process completion
@@ -501,8 +504,8 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 	case FAILURE:
 		log.WithFields(log.Fields{
 			"failure timeout (seconds)": exp.FailureTimeout,
-			"potential victim":          oppName(finish1.name),
-		}).Info(oppName(finish1.name) + " may be killed soon...")
+			"potential victim name":     oppName(finish1.name),
+		}).Info("The second process might be killed soon...")
 
 		select {
 		case <-time.After(time.Duration(exp.FailureTimeout) * time.Second):
@@ -514,9 +517,9 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 			// Kill the other process
 			if err := cmds[oppName(finish1.name)].Process.Kill(); err != nil {
 				log.WithFields(log.Fields{
-					"name": oppName(finish1.name),
-					"err":  err,
-				}).Error("Failed to kill")
+					"victim": oppName(finish1.name),
+					"err":    err,
+				}).Error("Failed to kill the second process")
 			}
 
 			// Wait second process completion
