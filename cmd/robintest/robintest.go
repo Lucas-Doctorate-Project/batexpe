@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/docopt/docopt-go"
+	log "github.com/sirupsen/logrus"
 	"gitlab.inria.fr/batsim/batexpe"
 	"os"
-	"os/exec"
 	"strconv"
-	"time"
 )
 
 const (
@@ -17,20 +15,16 @@ const (
 	EXPECT_FALSE
 )
 
-type RobinTestResult struct {
-	returnCode int
-	output     string
-}
-
 func main() {
 	usage := `Tests one robin execution.
 
 Usage: 
   robintest <description-file>
   			[(--expect-simu-success | --expect-simu-failure)]
-  			[(--expect-ctx-clean | --expect-ctx-busy)]
   			[(--expect-batsim-success | --expect-batsim-failure)]
   			[(--expect-sched-success | --expect-sched-failure)]
+  			[(--expect-ctx-clean | --expect-ctx-busy)]
+  			[(--expect-ctx-clean-at-end | --expect-ctx-busy-at-end)]
   			--test-timeout=<seconds>
 
   robintest -h | --help
@@ -53,6 +47,13 @@ Usage:
 		simuExpectation = EXPECT_FALSE
 	}
 
+	ctxExpectationAtEnd := EXPECT_NOTHING
+	if arguments["--expect-ctx-clean-at-end"] == true {
+		ctxExpectationAtEnd = EXPECT_TRUE
+	} else if arguments["--expect-ctx-busy-at-end"] == true {
+		ctxExpectationAtEnd = EXPECT_FALSE
+	}
+
 	batsimExpectation := EXPECT_NOTHING
 	if arguments["--expect-batsim-success"] == true {
 		batsimExpectation = EXPECT_TRUE
@@ -73,30 +74,33 @@ Usage:
 	}
 
 	testResult := RobinTest(arguments["<description-file>"].(string),
-		simuExpectation, ctxExpectation, batsimExpectation,
-		schedExpectation, testTimeout)
+		simuExpectation, batsimExpectation, schedExpectation,
+		ctxExpectation, ctxExpectationAtEnd, testTimeout)
 
 	os.Exit(testResult)
 }
 
 func RobinTest(descriptionFile string,
-	simuExpectation, ctxExpectation, batsimExpectation,
-	schedExpectation int, testTimeout float64) int {
+	simuExpectation, batsimExpectation, schedExpectation,
+	ctxExpectation, ctxExpectationAtEnd int,
+	testTimeout float64) int {
+
+	rresult := batexpe.RunRobin(descriptionFile, testTimeout)
+
+	log.WithFields(log.Fields{
+		"output": rresult.Output,
+	}).Info("Retrieved robin output")
+
+	json_lines, err := batexpe.ParseRobinOutput(rresult.Output)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Fatal("Could not parse robin output")
+	}
+
+	log.WithFields(log.Fields{
+		"lines": json_lines,
+	}).Info("Parsed robin output")
+
 	return 0
-}
-
-func RunRobin(descriptionFile string, testTimeout float64) RobinTestResult {
-	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Duration(testTimeout)*time.Second)
-	defer cancel()
-
-	termination := make(chan RobinTestResult)
-	executeRobinInnerCtx(ctx, descriptionFile, termination)
-	panic("meh")
-}
-
-func executeRobinInnerCtx(ctx context.Context, descriptionFile string,
-	onexit chan RobinTestResult) {
-	cmd := exec.Command("robin")
-	cmd.Args = []string{"robin", "--json-logs", descriptionFile}
 }
