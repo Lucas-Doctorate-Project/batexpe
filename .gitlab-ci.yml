@@ -63,7 +63,7 @@ test_should_fail:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - robintest batsched_badport.yaml --test-timeout 20 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_badport.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
     - robintest batsched_badwritedir.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-failure --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
     - robintest batsched_timeout.yaml --test-timeout 5 --expect-robin-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
     - robintest batsim_badsched_nosuchcmd.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
