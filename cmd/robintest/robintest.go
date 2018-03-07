@@ -253,7 +253,7 @@ func RobinTest(descriptionFile string, testTimeout float64,
 		}
 	}
 
-	// Context cleanliness before robin's execution
+	// Context cleanliness after robin's execution
 	if ctxExpectationAtEnd != EXPECT_NOTHING {
 		expectedCtxCleanAtEnd := ctxExpectationAtEnd == EXPECT_TRUE
 
@@ -261,7 +261,7 @@ func RobinTest(descriptionFile string, testTimeout float64,
 			log.WithFields(log.Fields{
 				"expected": expectedCtxCleanAtEnd,
 				"got":      ctxCleanAtEnd,
-			}).Error("Unexpected context cleanliness before robin's execution")
+			}).Error("Unexpected context cleanliness after robin's execution")
 
 			robintestReturnValue += UNEXPECTED_CONTEXT_CLEANLINESS_AT_END
 		}
