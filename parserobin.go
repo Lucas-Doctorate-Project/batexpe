@@ -7,6 +7,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os/exec"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -95,16 +96,89 @@ func ParseRobinOutput(output string) ([]interface{}, error) {
 	}
 	lines := strings.FieldsFunc(output, splitFn)
 
-	json_lines := make([]interface{}, len(lines))
+	jsonLines := make([]interface{}, len(lines))
 
 	for i := 0; i < len(lines); i++ {
 		log.WithFields(log.Fields{
 			"line": lines[i],
 		}).Debug("Parsing line")
-		if err := json.Unmarshal([]byte(lines[i]), &json_lines[i]); err != nil {
+		if err := json.Unmarshal([]byte(lines[i]), &jsonLines[i]); err != nil {
 			return nil, fmt.Errorf("Could not unmarshall JSON line: %s", lines[i])
 		}
 	}
 
-	return json_lines, nil
+	return jsonLines, nil
+}
+
+func WasBatsimSuccessful(robinJsonLines []interface{}) bool {
+	for _, object := range robinJsonLines {
+		line_as_map := object.(map[string]interface{})
+
+		if line_as_map["msg"] == "Simulation subprocess succeeded" &&
+			line_as_map["process name"] == "Batsim" {
+			return true
+		} else if line_as_map["msg"] == "Simulation subprocess failed" &&
+			line_as_map["process name"] == "Batsim" {
+			return false
+		}
+	}
+
+	return false
+}
+
+func WasSchedSuccessful(robinJsonLines []interface{}) (successful, present bool) {
+	present = false
+	for _, object := range robinJsonLines {
+		line_as_map := object.(map[string]interface{})
+
+		if line_as_map["msg"] == "Starting simulation" {
+			_, sched_in_simu := line_as_map["scheduler command"]
+			present = sched_in_simu
+		} else if line_as_map["msg"] == "Simulation subprocess succeeded" &&
+			line_as_map["process name"] == "Sched" {
+			return true, present
+		} else if line_as_map["msg"] == "Simulation subprocess failed" &&
+			line_as_map["process name"] == "Sched" {
+			return false, present
+		}
+	}
+
+	return false, present
+}
+
+func WasContextClean(robinJsonLines []interface{}) bool {
+	for _, object := range robinJsonLines {
+		line_as_map := object.(map[string]interface{})
+
+		if line_as_map["msg"] == "Starting simulation" {
+			return true
+		} else if line_as_map["msg"] == "Context remains invalid" {
+			return false
+		}
+	}
+
+	return false
+}
+
+func IsBatsimOrBatschedRunning() bool {
+	// This function directly searches for batsim or batsched processes.
+	r := regexp.MustCompile(`(?:\bbatsim )`)
+
+	psCmd := exec.Command("ps")
+	psCmd.Args = []string{"ps", "-e", "-o", "command"}
+
+	outBuf, err := psCmd.Output()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err":     err,
+			"command": psCmd,
+		}).Fatal("Cannot list running processes via ps")
+	}
+
+	//fmt.Println(string(outBuf))
+
+	matches := r.FindAllString(string(outBuf), -1)
+	fmt.Println(matches)
+	panic("Not implemented yet: regex only works for batsim")
+	return len(matches) > 0
 }
