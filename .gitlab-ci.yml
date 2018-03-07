@@ -54,8 +54,8 @@ test_should_pass:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - killall batsim batsched ; robintest batsched_ok.yaml --test-timeout 30 --expect-robin-success --expect-batsim-success --expect-sched-success --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsim_nosched_ok.yaml --test-timeout 30 --expect-robin-success --expect-batsim-success --expect-no-sched
+    - robintest batsched_ok.yaml --test-timeout 30 --expect-robin-success --expect-batsim-success --expect-sched-success --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsim_nosched_ok.yaml --test-timeout 30 --expect-robin-success --expect-batsim-success --expect-no-sched
   dependencies:
     - build
 
@@ -63,14 +63,14 @@ test_should_fail:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - killall batsim batsched ; robintest batsched_badport.yaml --test-timeout 20 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_badwritedir.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-failure --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_timeout.yaml --test-timeout 5 --expect-robin-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsim_badsched_nosuchcmd.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsim_badsched_wrongcmd.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-success --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsim_nosched_badbash.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-failure --expect-no-sched
-    - killall batsim batsched ; robintest batsim_nosched_badinput.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-failure --expect-no-sched
-    - killall batsim batsched ; robintest batsim_nosched_timeout.yaml --test-timeout 5 --expect-robin-failure --expect-no-sched
+    - robintest batsched_badport.yaml --test-timeout 20 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_badwritedir.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-failure --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_timeout.yaml --test-timeout 5 --expect-robin-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsim_badsched_nosuchcmd.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsim_badsched_wrongcmd.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-success --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsim_nosched_badbash.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-failure --expect-no-sched
+    - robintest batsim_nosched_badinput.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-failure --expect-no-sched
+    - robintest batsim_nosched_timeout.yaml --test-timeout 5 --expect-robin-failure --expect-no-sched
   dependencies:
     - build
 
@@ -78,15 +78,15 @@ test_schedcrash:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - killall batsim batsched ; robintest batsched_schedcrash_badargs.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_schedcrash_begin_loop.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_schedcrash_begin_loop.yaml --test-timeout 10 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_schedcrash_begin_segfault.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_schedcrash_mid_loop.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_schedcrash_mid_loop.yaml --test-timeout 10 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_schedcrash_mid_segfault.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_schedcrash_end_loop.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_schedcrash_end_loop.yaml --test-timeout 10 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - killall batsim batsched ; robintest batsched_schedcrash_end_segfault.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_schedcrash_badargs.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_schedcrash_begin_loop.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_schedcrash_begin_loop.yaml --test-timeout 10 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_schedcrash_begin_segfault.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_schedcrash_mid_loop.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_schedcrash_mid_loop.yaml --test-timeout 10 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_schedcrash_mid_segfault.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_schedcrash_end_loop.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_schedcrash_end_loop.yaml --test-timeout 10 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - robintest batsched_schedcrash_end_segfault.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
   dependencies:
     - build
