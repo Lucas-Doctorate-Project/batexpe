@@ -32,7 +32,7 @@ build:
     # Build robin
     - go build -o ${CI_PROJECT_DIR}/artifacts/robin ./cmd/robin
     # Build robintest
-    - go build -o ${CI_PROJECT_DIR}/artifacts/robin ./cmd/robintest
+    - go build -o ${CI_PROJECT_DIR}/artifacts/robintest ./cmd/robintest
   artifacts:
     paths:
       - ${CI_PROJECT_DIR}/artifacts/robin
