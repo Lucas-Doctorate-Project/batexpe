@@ -13,13 +13,17 @@ const (
 	EXPECT_TRUE
 	EXPECT_FALSE
 	EXPECT_ABSENCE
+	EXPECT_KILLED
 )
 
 const (
 	UNEXPECTED_ROBIN_SUCCESS_STATE int = 1 << iota
+	UNEXPECTED_ROBIN_KILL_STATE
 	UNEXPECTED_BATSIM_SUCCESS_STATE
+	UNEXPECTED_BATSIM_KILL_STATE
 	UNEXPECTED_SCHED_SUCCESS_STATE
 	UNEXPECTED_SCHED_PRESENCE_STATE
+	UNEXPECTED_SCHED_KILL_STATE
 	UNEXPECTED_CONTEXT_CLEANLINESS
 	UNEXPECTED_CONTEXT_CLEANLINESS_AT_BEGIN
 	UNEXPECTED_CONTEXT_CLEANLINESS_AT_END
@@ -31,9 +35,12 @@ func main() {
 Usage: 
   robintest <description-file>
   			--test-timeout=<seconds>
-  			[(--expect-robin-success | --expect-robin-failure)]
-  			[(--expect-batsim-success | --expect-batsim-failure)]
-  			[(--expect-sched-success | --expect-sched-failure | --expect-no-sched)]
+  			[(--expect-robin-success | --expect-robin-failure |
+  			  --expect-robin-killed)]
+  			[(--expect-batsim-success | --expect-batsim-failure |
+  			  --expect-batsim-killed)]
+  			[(--expect-sched-success | --expect-sched-failure |
+  			  --expect-sched-killed | --expect-no-sched)]
   			[(--expect-ctx-clean | --expect-ctx-busy)]
   			[(--expect-ctx-clean-at-begin | --expect-ctx-busy-at-begin)]
   			[(--expect-ctx-clean-at-end | --expect-ctx-busy-at-end)]
@@ -49,6 +56,8 @@ Usage:
 		robinExpectation = EXPECT_TRUE
 	} else if arguments["--expect-robin-failure"] == true {
 		robinExpectation = EXPECT_FALSE
+	} else if arguments["--expect-robin-killed"] == true {
+		robinExpectation = EXPECT_KILLED
 	}
 
 	// Did the execution context become clean during robin's execution?
@@ -81,6 +90,8 @@ Usage:
 		batsimExpectation = EXPECT_TRUE
 	} else if arguments["--expect-batsim-failure"] == true {
 		batsimExpectation = EXPECT_FALSE
+	} else if arguments["--expect-batsim-killed"] == true {
+		batsimExpectation = EXPECT_KILLED
 	}
 
 	// Was the scheduler successful (and present) in robin's execution?
@@ -89,6 +100,8 @@ Usage:
 		schedExpectation = EXPECT_TRUE
 	} else if arguments["--expect-sched-failure"] == true {
 		schedExpectation = EXPECT_FALSE
+	} else if arguments["--expect-sched-killed"] == true {
+		schedExpectation = EXPECT_KILLED
 	} else if arguments["--expect-no-sched"] == true {
 		schedExpectation = EXPECT_ABSENCE
 	}
@@ -128,7 +141,9 @@ func RobinTest(descriptionFile string, testTimeout float64,
 	// Robin result
 	if robinExpectation != EXPECT_NOTHING {
 		expectedRobinSuccess := robinExpectation == EXPECT_TRUE
-		robinSuccess := rresult.Finished && rresult.ReturnCode == 0
+		expectedRobinKilled := robinExpectation == EXPECT_KILLED
+		robinSuccess := rresult.ReturnCode == 0
+		robinKilled := rresult.Finished == false
 
 		if robinSuccess != expectedRobinSuccess {
 			log.WithFields(log.Fields{
@@ -138,12 +153,22 @@ func RobinTest(descriptionFile string, testTimeout float64,
 
 			robintestReturnValue += UNEXPECTED_ROBIN_SUCCESS_STATE
 		}
+
+		if robinKilled != expectedRobinKilled {
+			log.WithFields(log.Fields{
+				"expected": expectedRobinKilled,
+				"got":      robinKilled,
+			}).Error("Unexpected robin kill state")
+
+			robintestReturnValue += UNEXPECTED_ROBIN_KILL_STATE
+		}
 	}
 
 	// Batsim successfulness
 	if batsimExpectation != EXPECT_NOTHING {
 		expectedBatsimSuccess := batsimExpectation == EXPECT_TRUE
-		batsimSuccess := batexpe.WasBatsimSuccessful(jsonLines)
+		expectedBatsimKilled := batsimExpectation == EXPECT_KILLED
+		batsimSuccess, batsimKilled := batexpe.WasBatsimSuccessful(jsonLines)
 
 		if batsimSuccess != expectedBatsimSuccess {
 			log.WithFields(log.Fields{
@@ -153,13 +178,23 @@ func RobinTest(descriptionFile string, testTimeout float64,
 
 			robintestReturnValue += UNEXPECTED_BATSIM_SUCCESS_STATE
 		}
+
+		if batsimKilled != expectedBatsimKilled {
+			log.WithFields(log.Fields{
+				"expected": expectedBatsimKilled,
+				"got":      batsimKilled,
+			}).Error("Unexpected batsim kill state")
+
+			robintestReturnValue += UNEXPECTED_BATSIM_KILL_STATE
+		}
 	}
 
 	// Sched successfulness and presence
 	if schedExpectation != EXPECT_NOTHING {
 		expectedSchedSuccess := schedExpectation == EXPECT_TRUE
 		expectedSchedPresence := schedExpectation != EXPECT_ABSENCE
-		schedSuccess, schedPresence := batexpe.WasSchedSuccessful(jsonLines)
+		expectedSchedKilled := schedExpectation == EXPECT_KILLED
+		schedSuccess, schedPresence, schedKilled := batexpe.WasSchedSuccessful(jsonLines)
 
 		if schedSuccess != expectedSchedSuccess {
 			log.WithFields(log.Fields{
@@ -177,6 +212,15 @@ func RobinTest(descriptionFile string, testTimeout float64,
 			}).Error("Unexpected sched presence state")
 
 			robintestReturnValue += UNEXPECTED_SCHED_PRESENCE_STATE
+		}
+
+		if schedKilled != expectedSchedKilled {
+			log.WithFields(log.Fields{
+				"expected": expectedSchedKilled,
+				"got":      schedKilled,
+			}).Error("Unexpected sched kill state")
+
+			robintestReturnValue += UNEXPECTED_SCHED_KILL_STATE
 		}
 	}
 

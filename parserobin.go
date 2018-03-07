@@ -109,49 +109,57 @@ func ParseRobinOutput(output string) ([]interface{}, error) {
 	return jsonLines, nil
 }
 
-func WasBatsimSuccessful(robinJsonLines []interface{}) bool {
+func WasBatsimSuccessful(robinJsonLines []interface{}) (successful, killed bool) {
 	for _, object := range robinJsonLines {
-		line_as_map := object.(map[string]interface{})
+		lineAsMap := object.(map[string]interface{})
 
-		if line_as_map["msg"] == "Simulation subprocess succeeded" &&
-			line_as_map["process name"] == "Batsim" {
-			return true
-		} else if line_as_map["msg"] == "Simulation subprocess failed" &&
-			line_as_map["process name"] == "Batsim" {
-			return false
+		if lineAsMap["msg"] == "Simulation subprocess succeeded" &&
+			lineAsMap["process name"] == "Batsim" {
+			return true, false
+		} else if lineAsMap["msg"] == "Simulation subprocess failed" &&
+			lineAsMap["process name"] == "Batsim" {
+			batsimKilled := lineAsMap["err"] == "signal: killed"
+			return false, batsimKilled
+		} else if lineAsMap["msg"] == "Simulation subprocess failed (simulation timeout reached)" &&
+			lineAsMap["process name"] == "Batsim" {
+			return false, true
 		}
 	}
 
-	return false
+	return false, false
 }
 
-func WasSchedSuccessful(robinJsonLines []interface{}) (successful, present bool) {
+func WasSchedSuccessful(robinJsonLines []interface{}) (successful, present, killed bool) {
 	present = false
 	for _, object := range robinJsonLines {
-		line_as_map := object.(map[string]interface{})
+		lineAsMap := object.(map[string]interface{})
 
-		if line_as_map["msg"] == "Starting simulation" {
-			_, sched_in_simu := line_as_map["scheduler command"]
+		if lineAsMap["msg"] == "Starting simulation" {
+			_, sched_in_simu := lineAsMap["scheduler command"]
 			present = sched_in_simu
-		} else if line_as_map["msg"] == "Simulation subprocess succeeded" &&
-			line_as_map["process name"] == "Scheduler" {
-			return true, present
-		} else if line_as_map["msg"] == "Simulation subprocess failed" &&
-			line_as_map["process name"] == "Scheduler" {
-			return false, present
+		} else if lineAsMap["msg"] == "Simulation subprocess succeeded" &&
+			lineAsMap["process name"] == "Scheduler" {
+			return true, present, false
+		} else if lineAsMap["msg"] == "Simulation subprocess failed" &&
+			lineAsMap["process name"] == "Scheduler" {
+			schedKilled := lineAsMap["err"] == "signal: killed"
+			return false, present, schedKilled
+		} else if lineAsMap["msg"] == "Simulation subprocess failed (simulation timeout reached)" &&
+			lineAsMap["process name"] == "Scheduler" {
+			return false, present, true
 		}
 	}
 
-	return false, present
+	return false, present, false
 }
 
 func WasContextClean(robinJsonLines []interface{}) bool {
 	for _, object := range robinJsonLines {
-		line_as_map := object.(map[string]interface{})
+		lineAsMap := object.(map[string]interface{})
 
-		if line_as_map["msg"] == "Starting simulation" {
+		if lineAsMap["msg"] == "Starting simulation" {
 			return true
-		} else if line_as_map["msg"] == "Context remains invalid" {
+		} else if lineAsMap["msg"] == "Context remains invalid" {
 			return false
 		}
 	}
