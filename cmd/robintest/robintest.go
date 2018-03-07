@@ -21,6 +21,8 @@ const (
 	UNEXPECTED_SCHED_SUCCESS_STATE
 	UNEXPECTED_SCHED_PRESENCE_STATE
 	UNEXPECTED_CONTEXT_CLEANLINESS
+	UNEXPECTED_CONTEXT_CLEANLINESS_AT_BEGIN
+	UNEXPECTED_CONTEXT_CLEANLINESS_AT_END
 )
 
 func main() {
@@ -41,6 +43,7 @@ Usage:
 
 	arguments, _ := docopt.Parse(usage, nil, true, batexpe.Version(), false)
 
+	// Has robin been successful? (returned 0 before test timeout)
 	robinExpectation := EXPECT_NOTHING
 	if arguments["--expect-robin-success"] == true {
 		robinExpectation = EXPECT_TRUE
@@ -48,6 +51,7 @@ Usage:
 		robinExpectation = EXPECT_FALSE
 	}
 
+	// Did the execution context become clean during robin's execution?
 	ctxExpectation := EXPECT_NOTHING
 	if arguments["--expect-ctx-clean"] == true {
 		ctxExpectation = EXPECT_TRUE
@@ -55,6 +59,15 @@ Usage:
 		ctxExpectation = EXPECT_FALSE
 	}
 
+	// Was the execution context clean before running robin?
+	ctxExpectationAtBegin := EXPECT_NOTHING
+	if arguments["--expect-ctx-clean-at-begin"] == true {
+		ctxExpectationAtBegin = EXPECT_TRUE
+	} else if arguments["--expect-ctx-busy-at-begin"] == true {
+		ctxExpectationAtBegin = EXPECT_FALSE
+	}
+
+	// Was the execution context clean after running robin?
 	ctxExpectationAtEnd := EXPECT_NOTHING
 	if arguments["--expect-ctx-clean-at-end"] == true {
 		ctxExpectationAtEnd = EXPECT_TRUE
@@ -62,6 +75,7 @@ Usage:
 		ctxExpectationAtEnd = EXPECT_FALSE
 	}
 
+	// Was Batsim successful in robin's execution?
 	batsimExpectation := EXPECT_NOTHING
 	if arguments["--expect-batsim-success"] == true {
 		batsimExpectation = EXPECT_TRUE
@@ -69,6 +83,7 @@ Usage:
 		batsimExpectation = EXPECT_FALSE
 	}
 
+	// Was the scheduler successful (and present) in robin's execution?
 	schedExpectation := EXPECT_NOTHING
 	if arguments["--expect-sched-success"] == true {
 		schedExpectation = EXPECT_TRUE
@@ -83,21 +98,23 @@ Usage:
 		panic("Invalid test-timeout value: Cannot convert to float")
 	}
 
-	testResult := RobinTest(arguments["<description-file>"].(string),
+	testResult := RobinTest(arguments["<description-file>"].(string), testTimeout,
 		robinExpectation, batsimExpectation, schedExpectation,
-		ctxExpectation, ctxExpectationAtEnd, testTimeout)
+		ctxExpectation, ctxExpectationAtBegin, ctxExpectationAtEnd)
 
 	os.Exit(testResult)
 }
 
-func RobinTest(descriptionFile string,
+func RobinTest(descriptionFile string, testTimeout float64,
 	robinExpectation, batsimExpectation, schedExpectation,
-	ctxExpectation, ctxExpectationAtEnd int,
-	testTimeout float64) int {
+	ctxExpectation, ctxExpectationAtBegin, ctxExpectationAtEnd int) int {
 
-	returnValue := 0
-
+	// Computing whether the context is clean or not is done by checking whether
+	// any batsim or batsched is running. This is intentionally done with a
+	// different function (and technique) that the one done within robin.
+	ctxCleanAtBegin := batexpe.IsBatsimOrBatschedRunning() == false
 	rresult := batexpe.RunRobin(descriptionFile, testTimeout)
+	ctxCleanAtEnd := batexpe.IsBatsimOrBatschedRunning() == false
 
 	jsonLines, err := batexpe.ParseRobinOutput(rresult.Output)
 	if err != nil {
@@ -105,6 +122,8 @@ func RobinTest(descriptionFile string,
 			"err": err,
 		}).Fatal("Could not parse robin output")
 	}
+
+	robintestReturnValue := 0
 
 	// Robin result
 	if robinExpectation != EXPECT_NOTHING {
@@ -117,7 +136,7 @@ func RobinTest(descriptionFile string,
 				"got":      robinSuccess,
 			}).Error("Unexpected robin success state")
 
-			returnValue += UNEXPECTED_ROBIN_SUCCESS_STATE
+			robintestReturnValue += UNEXPECTED_ROBIN_SUCCESS_STATE
 		}
 	}
 
@@ -132,7 +151,7 @@ func RobinTest(descriptionFile string,
 				"got":      batsimSuccess,
 			}).Error("Unexpected batsim success state")
 
-			returnValue += UNEXPECTED_BATSIM_SUCCESS_STATE
+			robintestReturnValue += UNEXPECTED_BATSIM_SUCCESS_STATE
 		}
 	}
 
@@ -148,7 +167,7 @@ func RobinTest(descriptionFile string,
 				"got":      schedSuccess,
 			}).Error("Unexpected sched success state")
 
-			returnValue += UNEXPECTED_SCHED_SUCCESS_STATE
+			robintestReturnValue += UNEXPECTED_SCHED_SUCCESS_STATE
 		}
 
 		if schedPresence != expectedSchedPresence {
@@ -157,11 +176,11 @@ func RobinTest(descriptionFile string,
 				"got":      schedPresence,
 			}).Error("Unexpected sched presence state")
 
-			returnValue += UNEXPECTED_SCHED_PRESENCE_STATE
+			robintestReturnValue += UNEXPECTED_SCHED_PRESENCE_STATE
 		}
 	}
 
-	// Context cleanliness during simulation
+	// Context cleanliness during robin's execution
 	if ctxExpectation != EXPECT_NOTHING {
 		expectedContextClean := ctxExpectation == EXPECT_TRUE
 		contextClean := batexpe.WasContextClean(jsonLines)
@@ -170,11 +189,39 @@ func RobinTest(descriptionFile string,
 			log.WithFields(log.Fields{
 				"expected": expectedContextClean,
 				"got":      contextClean,
-			}).Error("Unexpected context cleanliness")
+			}).Error("Unexpected context cleanliness during robin's execution")
 
-			returnValue += UNEXPECTED_CONTEXT_CLEANLINESS
+			robintestReturnValue += UNEXPECTED_CONTEXT_CLEANLINESS
 		}
 	}
 
-	return returnValue
+	// Context cleanliness before robin's execution
+	if ctxExpectationAtBegin != EXPECT_NOTHING {
+		expectedCtxCleanAtBegin := ctxExpectationAtBegin == EXPECT_TRUE
+
+		if ctxCleanAtBegin != expectedCtxCleanAtBegin {
+			log.WithFields(log.Fields{
+				"expected": expectedCtxCleanAtBegin,
+				"got":      ctxCleanAtBegin,
+			}).Error("Unexpected context cleanliness before robin's execution")
+
+			robintestReturnValue += UNEXPECTED_CONTEXT_CLEANLINESS_AT_BEGIN
+		}
+	}
+
+	// Context cleanliness before robin's execution
+	if ctxExpectationAtEnd != EXPECT_NOTHING {
+		expectedCtxCleanAtEnd := ctxExpectationAtEnd == EXPECT_TRUE
+
+		if ctxCleanAtEnd != expectedCtxCleanAtEnd {
+			log.WithFields(log.Fields{
+				"expected": expectedCtxCleanAtEnd,
+				"got":      ctxCleanAtEnd,
+			}).Error("Unexpected context cleanliness before robin's execution")
+
+			robintestReturnValue += UNEXPECTED_CONTEXT_CLEANLINESS_AT_END
+		}
+	}
+
+	return robintestReturnValue
 }

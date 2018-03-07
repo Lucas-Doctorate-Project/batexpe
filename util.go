@@ -2,6 +2,7 @@ package batexpe
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -102,4 +103,26 @@ func PreviewFile(filename string, maxLines int64) (preview string, err error) {
 	}
 
 	return strconv.Itoa(int(nbLines)), nil
+}
+
+func IsBatsimOrBatschedRunning() bool {
+	// This function directly searches for batsim or batsched processes.
+	//r := regexp.MustCompile(`^[[:^blank:]]*(?:\bbatsim )|(?:\bbatsched\b)$`)
+	rBatsim := regexp.MustCompile(`(?m)^\S*\bbatsim .*$`)
+	rBatsched := regexp.MustCompile(`(?m)^\S*\bbatsched.*$`)
+
+	psCmd := exec.Command("ps")
+	psCmd.Args = []string{"ps", "-e", "-o", "command"}
+
+	outBuf, err := psCmd.Output()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err":     err,
+			"command": psCmd,
+		}).Fatal("Cannot list running processes via ps")
+	}
+
+	batsimMatches := rBatsim.FindAllString(string(outBuf), -1)
+	batschedMatches := rBatsched.FindAllString(string(outBuf), -1)
+	return len(batsimMatches) > 0 || len(batschedMatches) > 0
 }

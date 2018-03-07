@@ -7,7 +7,6 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os/exec"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -58,9 +57,9 @@ func executeRobinInnerCtx(ctx context.Context, descriptionFile string,
 
 		if ctx.Err() != nil {
 			log.WithFields(log.Fields{
-				"command": cmd,
-				"context": ctx,
-			}).Error("Test timeout reached!")
+				"err":     ctx.Err(),
+				"command": cmd.Args,
+			}).Info("Test timeout reached!")
 		} else {
 			rresult.Finished = true
 		}
@@ -158,27 +157,4 @@ func WasContextClean(robinJsonLines []interface{}) bool {
 	}
 
 	return false
-}
-
-func IsBatsimOrBatschedRunning() bool {
-	// This function directly searches for batsim or batsched processes.
-	r := regexp.MustCompile(`(?:\bbatsim )`)
-
-	psCmd := exec.Command("ps")
-	psCmd.Args = []string{"ps", "-e", "-o", "command"}
-
-	outBuf, err := psCmd.Output()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err":     err,
-			"command": psCmd,
-		}).Fatal("Cannot list running processes via ps")
-	}
-
-	//fmt.Println(string(outBuf))
-
-	matches := r.FindAllString(string(outBuf), -1)
-	fmt.Println(matches)
-	panic("Not implemented yet: regex only works for batsim")
-	return len(matches) > 0
 }
