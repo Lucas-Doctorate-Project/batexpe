@@ -134,10 +134,10 @@ func WasSchedSuccessful(robinJsonLines []interface{}) (successful, present bool)
 			_, sched_in_simu := line_as_map["scheduler command"]
 			present = sched_in_simu
 		} else if line_as_map["msg"] == "Simulation subprocess succeeded" &&
-			line_as_map["process name"] == "Sched" {
+			line_as_map["process name"] == "Scheduler" {
 			return true, present
 		} else if line_as_map["msg"] == "Simulation subprocess failed" &&
-			line_as_map["process name"] == "Sched" {
+			line_as_map["process name"] == "Scheduler" {
 			return false, present
 		}
 	}
