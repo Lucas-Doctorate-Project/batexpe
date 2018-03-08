@@ -224,7 +224,7 @@ func logExecuteInnerCtxError(errMsg string, err error,
 
 // Execute a command, writing status result on a channel
 func executeInnerCtx(name, cmdString, cmdFile, stdoutFile, stderrFile string,
-	cmd *exec.Cmd, ctx context.Context, onstart chan string,
+	cmd *exec.Cmd, ctx context.Context, onstart chan cmdFinishedMsg,
 	onexit chan cmdFinishedMsg, previewOnError bool) {
 
 	log.WithFields(log.Fields{
@@ -239,15 +239,16 @@ func executeInnerCtx(name, cmdString, cmdFile, stdoutFile, stderrFile string,
 		status := logExecuteInnerCtxError("Could not start simulation subprocess", err,
 			name, cmdString, cmdFile, stdoutFile, stderrFile, cmd, ctx,
 			previewOnError)
+		onstart <- cmdFinishedMsg{name, status}
 		onexit <- cmdFinishedMsg{name, status}
+		return
 	}
 
 	// Start succeeded
+	onstart <- cmdFinishedMsg{name, SUCCESS}
 	defer func() {
-		// Kill command's subprocesses (cf. https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773)
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		KillProcess(cmd.Process.Pid)
 	}()
-	onstart <- name
 
 	// Wait until command completion (or context timeout)
 	if err := cmd.Wait(); err != nil {
@@ -310,7 +311,7 @@ func executeBatsimAlone(exp Experiment, ctx context.Context,
 
 	// Execute the processes
 	pidsToKill := map[string]int{}
-	start := make(chan string)
+	start := make(chan cmdFinishedMsg)
 	termination := make(chan cmdFinishedMsg)
 	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
 		"/dev/null", exp.OutputDir+"/log/batsim.log", cmd, ctx, start,
@@ -327,25 +328,23 @@ func executeBatsimAlone(exp Experiment, ctx context.Context,
 			log.WithFields(log.Fields{
 				"name": name,
 				"pid":  pid,
-			}).Warn("Killing process.")
-			syscall.Kill(-pid, syscall.SIGKILL)
+			}).Warn("Killing process")
+			KillProcess(pid)
 		}
 		os.Exit(3)
 	}()
 
 	for {
 		select {
-		case <-start:
-			pidsToKill["Batsim"] = cmd.Process.Pid
+		case start1 := <-start:
+			if start1.state == SUCCESS {
+				pidsToKill["Batsim"] = cmd.Process.Pid
+			}
 		case finish1 := <-termination:
 			delete(pidsToKill, "Batsim")
 			return finish1.state
 		}
 	}
-
-	// Wait for completion
-	finish1 := <-termination
-	return finish1.state
 }
 
 func executeBatsimAndSched(exp Experiment, ctx context.Context,
@@ -420,7 +419,7 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 
 	// Execute the processes
 	pidsToKill := map[string]int{}
-	start := make(chan string)
+	start := make(chan cmdFinishedMsg)
 	termination := make(chan cmdFinishedMsg)
 	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
 		"/dev/null", exp.OutputDir+"/log/batsim.log",
@@ -441,32 +440,36 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 			log.WithFields(log.Fields{
 				"name": name,
 				"pid":  pid,
-			}).Warn("Killing process.")
-			syscall.Kill(-pid, syscall.SIGKILL)
+			}).Warn("Killing process")
+			KillProcess(pid)
 		}
 		os.Exit(3)
 	}()
 
-	oneFinished := false
-	var finish1 cmdFinishedMsg
-
-	for !oneFinished {
+	// Wait for both to start (or to fail starting)
+	nbStartedOrFailedStarting := 0
+	for nbStartedOrFailedStarting < 2 {
 		select {
-		case name := <-start:
-			pidsToKill[name] = cmds[name].Process.Pid
-		case finish1 = <-termination:
-			delete(pidsToKill, finish1.name)
-			success[finish1.name] = finish1.state
-			oneFinished = true
+		case start1 := <-start:
+			if start1.state == SUCCESS {
+				pidsToKill[start1.name] = cmds[start1.name].Process.Pid
+			}
+			nbStartedOrFailedStarting += 1
 		}
 	}
+
 	// Wait for first process to finish
+	finish1 := <-termination
+	delete(pidsToKill, finish1.name)
+	success[finish1.name] = finish1.state
 
 	log.WithFields(log.Fields{
 		"name":  finish1.name,
 		"state": finish1.state,
 	}).Debug("First process finished")
 
+	// Depending on the first process success state, we'll wait the second
+	// process differently.
 	switch finish1.state {
 	case SUCCESS:
 		log.WithFields(log.Fields{
@@ -474,32 +477,23 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 			"potential victim name":     oppName(finish1.name),
 		}).Info("The second process might be killed soon...")
 
-		select {
-		case <-time.After(time.Duration(exp.SuccessTimeout) * time.Second):
-			// Success timeout reached
-			log.WithFields(log.Fields{
-				"success timeout (seconds)": exp.SuccessTimeout,
-			}).Warn("Success timeout reached")
-
-			// Kill the other process
-			if err := cmds[oppName(finish1.name)].Process.Kill(); err != nil {
+		secondFinished := false
+		for !secondFinished {
+			select {
+			case <-time.After(time.Duration(exp.SuccessTimeout) * time.Second):
+				// Success timeout reached
 				log.WithFields(log.Fields{
-					"victim": oppName(finish1.name),
-					"err":    err,
-				}).Error("Failed to kill the second process")
-			}
+					"success timeout (seconds)": exp.SuccessTimeout,
+				}).Warn("Success timeout reached")
 
-			// Wait second process completion
-			finish2 := <-termination
-			delete(pidsToKill, finish2.name)
-			success[finish2.name] = finish2.state
-		case name := <-start:
-			// Second process started
-			pidsToKill[name] = cmds[name].Process.Pid
-		case finish2 := <-termination:
-			// Second process finished
-			delete(pidsToKill, finish2.name)
-			success[finish2.name] = finish2.state
+				// Kill the other process
+				KillProcess(pidsToKill[oppName(finish1.name)])
+			case finish2 := <-termination:
+				// Second process finished
+				delete(pidsToKill, finish2.name)
+				success[finish2.name] = finish2.state
+				secondFinished = true
+			}
 		}
 	case FAILURE:
 		log.WithFields(log.Fields{
@@ -507,32 +501,23 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 			"potential victim name":     oppName(finish1.name),
 		}).Info("The second process might be killed soon...")
 
-		select {
-		case <-time.After(time.Duration(exp.FailureTimeout) * time.Second):
-			// Failure timeout reached
-			log.WithFields(log.Fields{
-				"failure timeout (seconds)": exp.FailureTimeout,
-			}).Warn("Failure timeout reached")
-
-			// Kill the other process
-			if err := cmds[oppName(finish1.name)].Process.Kill(); err != nil {
+		secondFinished := false
+		for !secondFinished {
+			select {
+			case <-time.After(time.Duration(exp.FailureTimeout) * time.Second):
+				// Failure timeout reached
 				log.WithFields(log.Fields{
-					"victim": oppName(finish1.name),
-					"err":    err,
-				}).Error("Failed to kill the second process")
-			}
+					"failure timeout (seconds)": exp.FailureTimeout,
+				}).Warn("Failure timeout reached")
 
-			// Wait second process completion
-			finish2 := <-termination
-			delete(pidsToKill, finish2.name)
-			success[finish2.name] = finish2.state
-		case name := <-start:
-			// Second process started
-			pidsToKill[name] = cmds[name].Process.Pid
-		case finish2 := <-termination:
-			// Second process finished
-			delete(pidsToKill, finish2.name)
-			success[finish2.name] = finish2.state
+				// Kill the other process
+				KillProcess(pidsToKill[oppName(finish1.name)])
+			case finish2 := <-termination:
+				// Second process finished
+				delete(pidsToKill, finish2.name)
+				success[finish2.name] = finish2.state
+				secondFinished = true
+			}
 		}
 	case TIMEOUT:
 		// Wait second process completion
@@ -605,4 +590,8 @@ func ExecuteOne(exp Experiment, previewOnError bool) int {
 	}
 
 	return -1
+}
+
+func KillProcess(pid int) {
+	syscall.Kill(-pid, syscall.SIGTERM)
 }
