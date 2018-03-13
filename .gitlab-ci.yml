@@ -53,7 +53,7 @@ cli:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - bats robin_cli.bats
+    - bats -p robin_cli.bats
   dependencies:
     - build
 
@@ -61,7 +61,7 @@ nosched:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - bats nosched.bats
+    - bats -p nosched.bats
   dependencies:
     - build
 
@@ -69,7 +69,7 @@ batsched:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - bats batsched_*.bats
+    - bats -p batsched_*.bats
 
 ###############################################################################
 # Angry test stage
@@ -78,7 +78,7 @@ nosched100:
   stage: test_repeat
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - seq 100 | xargs -Iz bats nosched.bats
+    - seq 100 | xargs -Iz bats -p nosched.bats
   dependencies:
     - build
 
@@ -86,7 +86,7 @@ batsched_fast50:
   stage: test_repeat
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - seq 50 | xargs -Iz bats batsched_fast.bats
+    - seq 50 | xargs -Iz bats -p batsched_fast.bats
   dependencies:
     - build
 
@@ -94,6 +94,6 @@ batsched_timeout10:
   stage: test_repeat
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
-    - seq 10 | xargs -Iz bats batsched_fast.bats
+    - seq 10 | xargs -Iz bats -p batsched_fast.bats
   dependencies:
     - build
