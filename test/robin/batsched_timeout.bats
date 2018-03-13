@@ -51,7 +51,7 @@ teardown() {
 }
 
 @test "batsched-schedcrash-end-loop" {
-    run robintest batsched-schedcrash-end-loop.yaml --test-timeout 10 \
+    run robintest batsched_schedcrash_end_loop.yaml --test-timeout 10 \
                   --expect-robin-killed --expect-batsim-killed \
                   --expect-sched-killed ${RT_CLEAN_CTX}
     good_return_or_print
