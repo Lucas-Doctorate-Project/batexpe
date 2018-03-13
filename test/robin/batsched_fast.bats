@@ -71,7 +71,7 @@ teardown() {
 }
 
 @test "batsched-schedcrash-end-segfault" {
-    run robintest batsched-schedcrash-end-segfault.yaml --test-timeout 30 \
+    run robintest batsched_schedcrash_end_segfault.yaml --test-timeout 30 \
                   --expect-robin-failure --expect-batsim-killed \
                   --expect-sched-failure ${RT_CLEAN_CTX}
     good_return_or_print
