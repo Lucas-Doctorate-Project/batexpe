@@ -16,6 +16,14 @@ before_script:
   - export PATH="${CI_PROJECT_DIR}/artifacts:${PATH}"
 
 ###############################################################################
+# Stages setup
+###############################################################################
+stages:
+  - build
+  - test
+  - test_repeat
+
+###############################################################################
 # Build stage
 ###############################################################################
 build:
@@ -44,49 +52,42 @@ build:
 cli:
   stage: test
   script:
-    - robin --version
-    - robin --help
-    - robin -h
+    - bats ${CI_PROJECT_DIR}/test/robin/robin_cli.bats
   dependencies:
     - build
 
-test_should_pass:
+nosched:
   stage: test
   script:
-    - cd ${CI_PROJECT_DIR}/test/robin
-    - robintest batsched_ok.yaml --test-timeout 30 --expect-robin-success --expect-batsim-success --expect-sched-success --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsim_nosched_ok.yaml --test-timeout 30 --expect-robin-success --expect-batsim-success --expect-no-sched
+    - bats ${CI_PROJECT_DIR}/test/robin/nosched.bats
   dependencies:
     - build
 
-test_should_fail:
+batsched:
   stage: test
   script:
-    - cd ${CI_PROJECT_DIR}/test/robin
-    - robintest batsched_badport.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_badwritedir.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-failure --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_timeout.yaml --test-timeout 5 --expect-robin-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsim_badsched_nosuchcmd.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsim_badsched_wrongcmd.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-success --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsim_nosched_badbash.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-failure --expect-no-sched
-    - robintest batsim_nosched_badinput.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-failure --expect-no-sched
-    - robintest batsim_nosched_timeout.yaml --test-timeout 5 --expect-robin-failure --expect-no-sched
+    - bats ${CI_PROJECT_DIR}/test/robin/batsched_*.bats
+
+###############################################################################
+# Angry test stage
+###############################################################################
+nosched100:
+  stage: test_repeat
+  script:
+    - seq 100 | xargs -Iz bats ${CI_PROJECT_DIR}/test/robin/nosched.bats
   dependencies:
     - build
 
-test_schedcrash:
-  stage: test
+batsched_fast50:
+  stage: test_repeat
   script:
-    - cd ${CI_PROJECT_DIR}/test/robin
-    - robintest batsched_schedcrash_badargs.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_schedcrash_begin_loop.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_schedcrash_begin_loop.yaml --test-timeout 10 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_schedcrash_begin_segfault.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_schedcrash_mid_loop.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_schedcrash_mid_loop.yaml --test-timeout 10 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_schedcrash_mid_segfault.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_schedcrash_end_loop.yaml --test-timeout 20 --expect-robin-failure --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_schedcrash_end_loop.yaml --test-timeout 10 --expect-robin-killed --expect-batsim-killed --expect-sched-killed --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
-    - robintest batsched_schedcrash_end_segfault.yaml --test-timeout 30 --expect-robin-failure --expect-batsim-killed --expect-sched-failure --expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end
+    - seq 50 | xargs -Iz bats ${CI_PROJECT_DIR}/test/robin/batsched_fast.bats
+  dependencies:
+    - build
+
+batsched_timeout10:
+  stage: test_repeat
+  script:
+    - seq 10 | xargs -Iz bats ${CI_PROJECT_DIR}/test/robin/batsched_fast.bats
   dependencies:
     - build
