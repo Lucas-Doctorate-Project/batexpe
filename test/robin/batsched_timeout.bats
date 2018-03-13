@@ -3,7 +3,17 @@ not_running() {
     nb_running=$(ps -e -o command| cut -d' ' -f1| grep -E "\b$1$"| wc -l)
     set -e
 
-    [ "${nb_running}" -eq 0 ]
+    if [ "${nb_running}" -ne 0 ]; then
+        (>&2 echo "A '$1' process is still running")
+        return 1
+    fi
+}
+
+good_return_or_print() {
+    if [ "${status}" -ne 0 ]; then
+        (>&2 echo "${output}")
+        return 1
+    fi
 }
 
 # setup is called before each test
@@ -23,26 +33,26 @@ teardown() {
     run robintest batsched_badport.yaml --test-timeout 20 \
                   --expect-robin-failure --expect-batsim-killed \
                   --expect-sched-killed ${RT_CLEAN_CTX}
-    [ "$status" -eq 0 ]
+    good_return_or_print
 }
 
 @test "batsched-schedcrash-begin-loop" {
     run robintest batsched_schedcrash_begin_loop.yaml --test-timeout 20 \
                   --expect-robin-failure --expect-batsim-killed \
                   --expect-sched-killed ${RT_CLEAN_CTX}
-    [ "$status" -eq 0 ]
+    good_return_or_print
 }
 
 @test "batsched-schedcrash-mid-loop" {
     run robintest batsched_schedcrash_mid_loop.yaml --test-timeout 10 \
                   --expect-robin-killed --expect-batsim-killed \
                   --expect-sched-killed ${RT_CLEAN_CTX}
-    [ "$status" -eq 0 ]
+    good_return_or_print
 }
 
 @test "batsched-schedcrash-end-loop" {
     run robintest batsched-schedcrash-end-loop.yaml --test-timeout 10 \
                   --expect-robin-killed --expect-batsim-killed \
                   --expect-sched-killed ${RT_CLEAN_CTX}
-    [ "$status" -eq 0 ]
+    good_return_or_print
 }

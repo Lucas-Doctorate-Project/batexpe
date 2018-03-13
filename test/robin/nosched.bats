@@ -3,7 +3,17 @@ not_running() {
     nb_running=$(ps -e -o command| cut -d' ' -f1| grep -E "\b$1$"| wc -l)
     set -e
 
-    [ "${nb_running}" -eq 0 ]
+    if [ "${nb_running}" -ne 0 ]; then
+        (>&2 echo "A '$1' process is still running")
+        return 1
+    fi
+}
+
+good_return_or_print() {
+    if [ "${status}" -ne 0 ]; then
+        (>&2 echo "${output}")
+        return 1
+    fi
 }
 
 # setup is called before each test
@@ -22,27 +32,27 @@ teardown() {
     run robintest batsim_nosched_badbash.yaml --test-timeout 30 \
                   --expect-robin-failure --expect-batsim-failure \
                   --expect-no-sched ${RT_CLEAN_CTX}
-    [ "$status" -eq 0 ]
+    good_return_or_print
 }
 
 @test "nosched-badinput" {
     run robintest batsim_nosched_badinput.yaml --test-timeout 30 \
                   --expect-robin-failure --expect-batsim-failure \
                   --expect-no-sched ${RT_CLEAN_CTX}
-    [ "$status" -eq 0 ]
+    good_return_or_print
 }
 
 @test "nosched-timeout" {
     run robintest batsim_nosched_timeout.yaml --test-timeout 5 \
                   --expect-robin-failure --expect-no-sched ${RT_CLEAN_CTX}
-    [ "$status" -eq 0 ]
+    good_return_or_print
 }
 
 @test "nosched-ok" {
     run robintest batsim_nosched_ok.yaml --test-timeout 30 \
                   --expect-robin-success --expect-batsim-success \
                   --expect-no-sched ${RT_CLEAN_CTX}
-    [ "$status" -eq 0 ]
+    good_return_or_print
 }
 
 
