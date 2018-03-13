@@ -118,7 +118,7 @@ func WasBatsimSuccessful(robinJsonLines []interface{}) (successful, killed bool)
 			return true, false
 		} else if lineAsMap["msg"] == "Simulation subprocess failed" &&
 			lineAsMap["process name"] == "Batsim" {
-			batsimKilled := lineAsMap["err"] == "signal: killed"
+			batsimKilled := lineAsMap["err"] == "signal: terminated"
 			return false, batsimKilled
 		} else if lineAsMap["msg"] == "Simulation subprocess failed (simulation timeout reached)" &&
 			lineAsMap["process name"] == "Batsim" {
@@ -142,7 +142,7 @@ func WasSchedSuccessful(robinJsonLines []interface{}) (successful, present, kill
 			return true, present, false
 		} else if lineAsMap["msg"] == "Simulation subprocess failed" &&
 			lineAsMap["process name"] == "Scheduler" {
-			schedKilled := lineAsMap["err"] == "signal: killed"
+			schedKilled := lineAsMap["err"] == "signal: terminated"
 			return false, present, schedKilled
 		} else if lineAsMap["msg"] == "Simulation subprocess failed (simulation timeout reached)" &&
 			lineAsMap["process name"] == "Scheduler" {
