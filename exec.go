@@ -1,7 +1,6 @@
 package batexpe
 
 import (
-	"context"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -170,23 +169,18 @@ func waitTcpPortAvailableSs(port uint16, onexit chan int) {
 	}
 }
 
-func logExecuteInnerCtxError(errMsg string, err error,
+func logExecuteTimeoutError(errMsg string, err error,
 	name, cmdString, cmdFile, stdoutFile, stderrFile string,
-	cmd *exec.Cmd, ctx context.Context, previewOnError bool) (status int) {
-	status = FAILURE
-
-	if ctx.Err() != nil {
-		errMsg = errMsg + " (simulation timeout reached)"
-		status = TIMEOUT
-	}
+	cmd *exec.Cmd, timeout float64, previewOnError bool) {
 
 	log.WithFields(log.Fields{
-		"process name": name,
-		"err":          err,
-		"command":      cmdString,
-		"command file": cmdFile,
-		"stdout file":  stdoutFile,
-		"stderr file":  stderrFile,
+		"process name":                 name,
+		"err":                          err,
+		"command":                      cmdString,
+		"command file":                 cmdFile,
+		"stdout file":                  stdoutFile,
+		"stderr file":                  stderrFile,
+		"simulation timeout (seconds)": timeout,
 	}).Error(errMsg)
 
 	// If the option is set, preview simulation logs to stdout
@@ -218,54 +212,68 @@ func logExecuteInnerCtxError(errMsg string, err error,
 				name, err.Error())
 		}
 	}
-
-	return status
 }
 
 // Execute a command, writing status result on a channel
-func executeInnerCtx(name, cmdString, cmdFile, stdoutFile, stderrFile string,
-	cmd *exec.Cmd, ctx context.Context, onstart chan cmdFinishedMsg,
+func executeTimeout(name, cmdString, cmdFile, stdoutFile, stderrFile string,
+	cmd *exec.Cmd, timeout float64, onstart chan cmdFinishedMsg,
 	onexit chan cmdFinishedMsg, previewOnError bool) {
 
 	log.WithFields(log.Fields{
 		"process name": name,
 		"command":      cmdString,
 		"command file": cmdFile,
-		"context":      ctx,
+		"timeout":      timeout,
 	}).Debug("Starting simulation subprocess")
 
 	if err := cmd.Start(); err != nil {
 		// Start failed
-		status := logExecuteInnerCtxError("Could not start simulation subprocess", err,
-			name, cmdString, cmdFile, stdoutFile, stderrFile, cmd, ctx,
-			previewOnError)
-		onstart <- cmdFinishedMsg{name, status}
-		onexit <- cmdFinishedMsg{name, status}
-		return
-	}
-
-	// Start succeeded
-	onstart <- cmdFinishedMsg{name, SUCCESS}
-	defer func() {
-		KillProcess(cmd.Process.Pid)
-	}()
-
-	// Wait until command completion (or context timeout)
-	if err := cmd.Wait(); err != nil {
-		status := logExecuteInnerCtxError("Simulation subprocess failed", err,
-			name, cmdString, cmdFile, stdoutFile, stderrFile, cmd, ctx,
-			previewOnError)
-		onexit <- cmdFinishedMsg{name, status}
-	} else {
 		log.WithFields(log.Fields{
 			"process name": name,
 			"command":      cmdString,
 			"command file": cmdFile,
 			"stdout file":  stdoutFile,
 			"stderr file":  stderrFile,
-		}).Info("Simulation subprocess succeeded")
+		}).Error("Could not start simulation subprocess")
+		onstart <- cmdFinishedMsg{name, FAILURE}
+		onexit <- cmdFinishedMsg{name, FAILURE}
+		return
+	}
 
-		onexit <- cmdFinishedMsg{name, SUCCESS}
+	// Start succeeded
+	pid := cmd.Process.Pid
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+	onstart <- cmdFinishedMsg{name, SUCCESS}
+
+	// Wait until command completion (or context timeout)
+	select {
+	case <-time.After(time.Duration(timeout) * time.Second):
+		logExecuteTimeoutError(
+			"Simulation subprocess failed (simulation timeout reached)", nil,
+			name, cmdString, cmdFile, stdoutFile, stderrFile, cmd, timeout,
+			previewOnError)
+		KillProcess(pid)
+		onexit <- cmdFinishedMsg{name, TIMEOUT}
+	case err := <-done:
+		if err != nil {
+			logExecuteTimeoutError("Simulation subprocess failed", err,
+				name, cmdString, cmdFile, stdoutFile, stderrFile, cmd, timeout,
+				previewOnError)
+			KillProcess(pid)
+			onexit <- cmdFinishedMsg{name, FAILURE}
+		} else {
+			log.WithFields(log.Fields{
+				"process name": name,
+				"command":      cmdString,
+				"command file": cmdFile,
+				"stdout file":  stdoutFile,
+				"stderr file":  stderrFile,
+			}).Info("Simulation subprocess succeeded")
+			onexit <- cmdFinishedMsg{name, SUCCESS}
+		}
 	}
 }
 
@@ -278,8 +286,7 @@ func oppName(str string) string {
 	}
 }
 
-func executeBatsimAlone(exp Experiment, ctx context.Context,
-	previewOnError bool) int {
+func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 	log.WithFields(log.Fields{
 		"simulation timeout (seconds)": exp.SimulationTimeout,
 		"batsim command":               exp.Batcmd,
@@ -295,7 +302,7 @@ func executeBatsimAlone(exp Experiment, ctx context.Context,
 			"err":      err,
 		}).Fatal("Cannot create file")
 	}
-	cmd := exec.CommandContext(ctx, "bash")
+	cmd := exec.Command("bash")
 	cmd.Args = []string{"bash", "-eux", exp.OutputDir + "/cmd/batsim.bash"}
 
 	// Log simulation output
@@ -313,9 +320,9 @@ func executeBatsimAlone(exp Experiment, ctx context.Context,
 	pidsToKill := map[string]int{}
 	start := make(chan cmdFinishedMsg)
 	termination := make(chan cmdFinishedMsg)
-	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
-		"/dev/null", exp.OutputDir+"/log/batsim.log", cmd, ctx, start,
-		termination, previewOnError)
+	go executeTimeout("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
+		"/dev/null", exp.OutputDir+"/log/batsim.log", cmd,
+		exp.SimulationTimeout, start, termination, previewOnError)
 
 	// Guard against ctrl+c
 	sigint := make(chan os.Signal, 1)
@@ -347,8 +354,7 @@ func executeBatsimAlone(exp Experiment, ctx context.Context,
 	}
 }
 
-func executeBatsimAndSched(exp Experiment, ctx context.Context,
-	previewOnError bool) int {
+func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
 	log.WithFields(log.Fields{
 		"simulation timeout (seconds)": exp.SimulationTimeout,
 		"batsim command":               exp.Batcmd,
@@ -371,7 +377,7 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 			"err":      err,
 		}).Fatal("Cannot create file")
 	}
-	cmds["Batsim"] = exec.CommandContext(ctx, "bash")
+	cmds["Batsim"] = exec.Command("bash")
 	cmds["Batsim"].SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmds["Batsim"].Args = []string{"bash", "-eux", exp.OutputDir + "/cmd/batsim.bash"}
 
@@ -382,7 +388,7 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 			"err":      err,
 		}).Fatal("Cannot create file")
 	}
-	cmds["Scheduler"] = exec.CommandContext(ctx, "bash")
+	cmds["Scheduler"] = exec.Command("bash")
 	cmds["Scheduler"].SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmds["Scheduler"].Args = []string{"bash", "-eux", exp.OutputDir + "/cmd/sched.bash"}
 
@@ -421,13 +427,15 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 	pidsToKill := map[string]int{}
 	start := make(chan cmdFinishedMsg)
 	termination := make(chan cmdFinishedMsg)
-	go executeInnerCtx("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
+	go executeTimeout("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
 		"/dev/null", exp.OutputDir+"/log/batsim.log",
-		cmds["Batsim"], ctx, start, termination, previewOnError)
-	go executeInnerCtx("Scheduler", exp.Schedcmd,
+		cmds["Batsim"], exp.SimulationTimeout, start, termination,
+		previewOnError)
+	go executeTimeout("Scheduler", exp.Schedcmd,
 		exp.OutputDir+"/cmd/sched.bash",
 		exp.OutputDir+"/log/sched.out.log", exp.OutputDir+"/log/sched.err.log",
-		cmds["Scheduler"], ctx, start, termination, previewOnError)
+		cmds["Scheduler"], exp.SimulationTimeout, start, termination,
+		previewOnError)
 
 	// Guard against ctrl+c
 	sigint := make(chan os.Signal, 1)
@@ -459,7 +467,8 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 	}
 
 	// Wait for first process to finish
-	finish1 := <-termination
+	var finish1, finish2 cmdFinishedMsg
+	finish1 = <-termination
 	delete(pidsToKill, finish1.name)
 	success[finish1.name] = finish1.state
 
@@ -477,23 +486,17 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 			"potential victim name":     oppName(finish1.name),
 		}).Info("The second process might be killed soon...")
 
-		secondFinished := false
-		for !secondFinished {
-			select {
-			case <-time.After(time.Duration(exp.SuccessTimeout) * time.Second):
-				// Success timeout reached
-				log.WithFields(log.Fields{
-					"success timeout (seconds)": exp.SuccessTimeout,
-				}).Warn("Success timeout reached")
+		select {
+		case <-time.After(time.Duration(exp.SuccessTimeout) * time.Second):
+			// Success timeout reached
+			log.WithFields(log.Fields{
+				"success timeout (seconds)": exp.SuccessTimeout,
+			}).Warn("Success timeout reached")
 
-				// Kill the other process
-				KillProcess(pidsToKill[oppName(finish1.name)])
-			case finish2 := <-termination:
-				// Second process finished
-				delete(pidsToKill, finish2.name)
-				success[finish2.name] = finish2.state
-				secondFinished = true
-			}
+			// Kill the other process
+			KillProcess(pidsToKill[oppName(finish1.name)])
+			finish2 = <-termination
+		case finish2 = <-termination:
 		}
 	case FAILURE:
 		log.WithFields(log.Fields{
@@ -501,30 +504,26 @@ func executeBatsimAndSched(exp Experiment, ctx context.Context,
 			"potential victim name":     oppName(finish1.name),
 		}).Info("The second process might be killed soon...")
 
-		secondFinished := false
-		for !secondFinished {
-			select {
-			case <-time.After(time.Duration(exp.FailureTimeout) * time.Second):
-				// Failure timeout reached
-				log.WithFields(log.Fields{
-					"failure timeout (seconds)": exp.FailureTimeout,
-				}).Warn("Failure timeout reached")
+		select {
+		case <-time.After(time.Duration(exp.FailureTimeout) * time.Second):
+			// Failure timeout reached
+			log.WithFields(log.Fields{
+				"failure timeout (seconds)": exp.FailureTimeout,
+			}).Warn("Failure timeout reached")
 
-				// Kill the other process
-				KillProcess(pidsToKill[oppName(finish1.name)])
-			case finish2 := <-termination:
-				// Second process finished
-				delete(pidsToKill, finish2.name)
-				success[finish2.name] = finish2.state
-				secondFinished = true
-			}
+			// Kill the other process
+			KillProcess(pidsToKill[oppName(finish1.name)])
+			finish2 = <-termination
+		case finish2 = <-termination:
 		}
 	case TIMEOUT:
 		// Wait second process completion
-		finish2 := <-termination
-		delete(pidsToKill, finish2.name)
-		success[finish2.name] = finish2.state
+		finish2 = <-termination
 	}
+
+	// Second process finished
+	delete(pidsToKill, finish2.name)
+	success[finish2.name] = finish2.state
 
 	return max(success["Batsim"], success["Scheduler"])
 }
@@ -565,11 +564,7 @@ func ExecuteOne(exp Experiment, previewOnError bool) int {
 			}).Fatal("Sched command unset but Batsim is not in batexec mode")
 		}
 
-		// Create context (handles timeout)
-		ctx, cancel := context.WithTimeout(context.Background(),
-			time.Duration(exp.SimulationTimeout)*time.Second)
-		defer cancel()
-		return executeBatsimAlone(exp, ctx, previewOnError)
+		return executeBatsimAlone(exp, previewOnError)
 	} else {
 		// Execute Batsim and the scheduler
 		if batargs.BatexecMode == true {
@@ -582,11 +577,7 @@ func ExecuteOne(exp Experiment, previewOnError bool) int {
 		// Wait for context to be ready (open sockets, batsim processes...)
 		waitReadyForSimulation(exp, batargs)
 
-		// Create context (handles timeout)
-		ctx, cancel := context.WithTimeout(context.Background(),
-			time.Duration(exp.SimulationTimeout)*time.Second)
-		defer cancel()
-		return executeBatsimAndSched(exp, ctx, previewOnError)
+		return executeBatsimAndSched(exp, previewOnError)
 	}
 
 	return -1

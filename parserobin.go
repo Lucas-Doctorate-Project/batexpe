@@ -2,7 +2,6 @@ package batexpe
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
@@ -19,18 +18,14 @@ type RobinResult struct {
 }
 
 func RunRobin(descriptionFile string, testTimeout float64) RobinResult {
-	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Duration(testTimeout)*time.Second)
-	defer cancel()
-
 	termination := make(chan RobinResult)
-	go executeRobinInnerCtx(ctx, descriptionFile, termination)
+	go executeRobinWithTimeout(testTimeout, descriptionFile, termination)
 
 	rresult := <-termination
 	return rresult
 }
 
-func executeRobinInnerCtx(ctx context.Context, descriptionFile string,
+func executeRobinWithTimeout(timeout float64, descriptionFile string,
 	onexit chan RobinResult) {
 	cmd := exec.Command("robin")
 	cmd.Args = []string{"robin", "--json-logs", descriptionFile}
@@ -40,7 +35,7 @@ func executeRobinInnerCtx(ctx context.Context, descriptionFile string,
 
 	log.WithFields(log.Fields{
 		"command": cmd,
-		"context": ctx,
+		"timeout": timeout,
 	}).Debug("Starting robin")
 
 	if err := cmd.Start(); err != nil {
@@ -49,40 +44,45 @@ func executeRobinInnerCtx(ctx context.Context, descriptionFile string,
 		}).Fatal("Could not start robin")
 	}
 
+	robinPid := cmd.Process.Pid
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
 	var rresult RobinResult
-	rresult.Finished = false
-	rresult.ReturnCode = -1
 
-	if err := cmd.Wait(); err != nil {
-
-		if ctx.Err() != nil {
-			log.WithFields(log.Fields{
-				"err":     ctx.Err(),
-				"command": cmd.Args,
-			}).Info("Test timeout reached!")
-		} else {
-			rresult.Finished = true
-		}
-
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			// Exited with non-zero exit code
-			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-				rresult.ReturnCode = status.ExitStatus()
+	select {
+	case <-time.After(time.Duration(timeout) * time.Second):
+		log.WithFields(log.Fields{
+			"command": cmd.Args,
+			"timeout": timeout,
+		}).Info("Test timeout reached!")
+		rresult.Finished = false
+		rresult.ReturnCode = -1
+		KillProcess(robinPid)
+	case err := <-done:
+		rresult.Finished = true
+		if err != nil {
+			if exiterr, ok := err.(*exec.ExitError); ok {
+				// Exited with non-zero exit code
+				if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+					rresult.ReturnCode = status.ExitStatus()
+				} else {
+					log.WithFields(log.Fields{
+						"command": cmd,
+						"err":     err,
+					}).Fatal("Cannot retrieve robin exit code (case 1)")
+				}
 			} else {
 				log.WithFields(log.Fields{
 					"command": cmd,
 					"err":     err,
-				}).Fatal("Cannot retrieve robin exit code (case 1)")
+				}).Fatal("Cannot retrieve robin exit code (case 2)")
 			}
 		} else {
-			log.WithFields(log.Fields{
-				"command": cmd,
-				"err":     err,
-			}).Fatal("Cannot retrieve robin exit code (case 2)")
+			rresult.ReturnCode = 0
 		}
-	} else {
-		rresult.Finished = true
-		rresult.ReturnCode = 0
 	}
 
 	rresult.Output = stdout.String()
