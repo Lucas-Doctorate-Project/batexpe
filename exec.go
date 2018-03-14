@@ -286,6 +286,31 @@ func oppName(str string) string {
 	}
 }
 
+func cleanupSubprocesses(pidsToKill map[string]int) {
+	for name, pid := range pidsToKill {
+		log.WithFields(log.Fields{
+			"name": name,
+			"pid":  pid,
+		}).Warn("Killing process")
+		KillProcess(pid)
+	}
+}
+
+func setupGuards(pidsToKill *map[string]int) {
+	// Guard against ctrl+c
+	// Does not seem needed, as SIGTERM is also launched in this case
+
+	// Guard against (polite) kill
+	sigterm := make(chan os.Signal, 1)
+	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigterm
+		log.Warn("SIGTERM received. Killing remaining subprocesses.")
+		cleanupSubprocesses(*pidsToKill)
+		os.Exit(3)
+	}()
+}
+
 func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 	log.WithFields(log.Fields{
 		"simulation timeout (seconds)": exp.SimulationTimeout,
@@ -316,30 +341,16 @@ func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 	defer batlog.Close()
 	cmd.Stderr = batlog
 
+	// Guards against SIGINT (ctrl+c) and SIGTERM (polite kill)
+	pidsToKill := make(map[string]int)
+	setupGuards(&pidsToKill)
+
 	// Execute the processes
-	pidsToKill := map[string]int{}
 	start := make(chan cmdFinishedMsg)
 	termination := make(chan cmdFinishedMsg)
 	go executeTimeout("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
 		"/dev/null", exp.OutputDir+"/log/batsim.log", cmd,
 		exp.SimulationTimeout, start, termination, previewOnError)
-
-	// Guard against ctrl+c
-	sigint := make(chan os.Signal, 1)
-	signal.Notify(sigint, os.Interrupt)
-	go func() {
-		<-sigint
-
-		log.Warn("SIGINT received. Killing remaining subprocesses.")
-		for name, pid := range pidsToKill {
-			log.WithFields(log.Fields{
-				"name": name,
-				"pid":  pid,
-			}).Warn("Killing process")
-			KillProcess(pid)
-		}
-		os.Exit(3)
-	}()
 
 	for {
 		select {
@@ -423,8 +434,11 @@ func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
 	defer schederr.Close()
 	cmds["Scheduler"].Stderr = schederr
 
+	// Guards against SIGINT (ctrl+c) and SIGTERM (polite kill)
+	pidsToKill := make(map[string]int)
+	setupGuards(&pidsToKill)
+
 	// Execute the processes
-	pidsToKill := map[string]int{}
 	start := make(chan cmdFinishedMsg)
 	termination := make(chan cmdFinishedMsg)
 	go executeTimeout("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
@@ -436,23 +450,6 @@ func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
 		exp.OutputDir+"/log/sched.out.log", exp.OutputDir+"/log/sched.err.log",
 		cmds["Scheduler"], exp.SimulationTimeout, start, termination,
 		previewOnError)
-
-	// Guard against ctrl+c
-	sigint := make(chan os.Signal, 1)
-	signal.Notify(sigint, os.Interrupt)
-	go func() {
-		<-sigint
-
-		log.Warn("SIGINT received. Killing remaining subprocesses.")
-		for name, pid := range pidsToKill {
-			log.WithFields(log.Fields{
-				"name": name,
-				"pid":  pid,
-			}).Warn("Killing process")
-			KillProcess(pid)
-		}
-		os.Exit(3)
-	}()
 
 	// Wait for both to start (or to fail starting)
 	nbStartedOrFailedStarting := 0
