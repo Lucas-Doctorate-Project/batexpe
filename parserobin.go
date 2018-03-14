@@ -51,6 +51,7 @@ func executeRobinWithTimeout(timeout float64, descriptionFile string,
 	}()
 
 	var rresult RobinResult
+	var execErr error
 
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
@@ -60,29 +61,32 @@ func executeRobinWithTimeout(timeout float64, descriptionFile string,
 		}).Info("Test timeout reached!")
 		rresult.Finished = false
 		rresult.ReturnCode = -1
+
 		KillProcess(robinPid)
-	case err := <-done:
+		execErr = <-done
+	case execErr = <-done:
 		rresult.Finished = true
-		if err != nil {
-			if exiterr, ok := err.(*exec.ExitError); ok {
-				// Exited with non-zero exit code
-				if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-					rresult.ReturnCode = status.ExitStatus()
-				} else {
-					log.WithFields(log.Fields{
-						"command": cmd,
-						"err":     err,
-					}).Fatal("Cannot retrieve robin exit code (case 1)")
-				}
+	}
+
+	if execErr != nil {
+		if exiterr, ok := execErr.(*exec.ExitError); ok {
+			// Exited with non-zero exit code
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				rresult.ReturnCode = status.ExitStatus()
 			} else {
 				log.WithFields(log.Fields{
 					"command": cmd,
-					"err":     err,
-				}).Fatal("Cannot retrieve robin exit code (case 2)")
+					"err":     execErr,
+				}).Fatal("Cannot retrieve robin exit code (case 1)")
 			}
 		} else {
-			rresult.ReturnCode = 0
+			log.WithFields(log.Fields{
+				"command": cmd,
+				"err":     execErr,
+			}).Fatal("Cannot retrieve robin exit code (case 2)")
 		}
+	} else {
+		rresult.ReturnCode = 0
 	}
 
 	rresult.Output = stdout.String()
