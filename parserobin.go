@@ -17,18 +17,28 @@ type RobinResult struct {
 	Output     string
 }
 
-func RunRobin(descriptionFile string, testTimeout float64) RobinResult {
+func RunRobin(descriptionFile, coverFile string,
+	testTimeout float64) RobinResult {
 	termination := make(chan RobinResult)
-	go executeRobinWithTimeout(testTimeout, descriptionFile, termination)
+	go executeRobinWithTimeout(testTimeout, descriptionFile, coverFile,
+		termination)
 
 	rresult := <-termination
 	return rresult
 }
 
-func executeRobinWithTimeout(timeout float64, descriptionFile string,
-	onexit chan RobinResult) {
+func executeRobinWithTimeout(timeout float64, descriptionFile,
+	coverFile string, onexit chan RobinResult) {
 	cmd := exec.Command("robin")
-	cmd.Args = []string{"robin", "--json-logs", descriptionFile}
+
+	if coverFile == "" {
+		cmd.Args = []string{"robin", "--json-logs", descriptionFile}
+	} else {
+		testArg := "-test.coverprofile=" + coverFile
+		cmd = exec.Command("robin.cover")
+		cmd.Args = []string{"robin.cover", testArg, descriptionFile,
+			"--json-logs"}
+	}
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -105,8 +115,12 @@ func ParseRobinOutput(output string) ([]interface{}, error) {
 		log.WithFields(log.Fields{
 			"line": lines[i],
 		}).Debug("Parsing line")
-		if err := json.Unmarshal([]byte(lines[i]), &jsonLines[i]); err != nil {
-			return nil, fmt.Errorf("Could not unmarshall JSON line: %s", lines[i])
+
+		// Parse line if it is not a coverage print
+		if lines[i] != "PASS" && !strings.HasPrefix(lines[i], "cover") {
+			if err := json.Unmarshal([]byte(lines[i]), &jsonLines[i]); err != nil {
+				return nil, fmt.Errorf("Could not unmarshall JSON line: %s", lines[i])
+			}
 		}
 	}
 

@@ -44,6 +44,7 @@ Usage:
   			[(--expect-ctx-clean | --expect-ctx-busy)]
   			[(--expect-ctx-clean-at-begin | --expect-ctx-busy-at-begin)]
   			[(--expect-ctx-clean-at-end | --expect-ctx-busy-at-end)]
+  			[--cover=<file>]
 
   robintest -h | --help
   robintest --version`
@@ -111,14 +112,20 @@ Usage:
 		panic("Invalid test-timeout value: Cannot convert to float")
 	}
 
-	testResult := RobinTest(arguments["<description-file>"].(string), testTimeout,
+	coverFile := ""
+	if arguments["--cover"] != nil {
+		coverFile = arguments["--cover"].(string)
+	}
+
+	testResult := RobinTest(arguments["<description-file>"].(string),
+		coverFile, testTimeout,
 		robinExpectation, batsimExpectation, schedExpectation,
 		ctxExpectation, ctxExpectationAtBegin, ctxExpectationAtEnd)
 
 	os.Exit(testResult)
 }
 
-func RobinTest(descriptionFile string, testTimeout float64,
+func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 	robinExpectation, batsimExpectation, schedExpectation,
 	ctxExpectation, ctxExpectationAtBegin, ctxExpectationAtEnd int) int {
 
@@ -126,7 +133,7 @@ func RobinTest(descriptionFile string, testTimeout float64,
 	// any batsim or batsched is running. This is intentionally done with a
 	// different function (and technique) that the one done within robin.
 	ctxCleanAtBegin := batexpe.IsBatsimOrBatschedRunning() == false
-	rresult := batexpe.RunRobin(descriptionFile, testTimeout)
+	rresult := batexpe.RunRobin(descriptionFile, coverFile, testTimeout)
 	ctxCleanAtEnd := batexpe.IsBatsimOrBatschedRunning() == false
 
 	jsonLines, err := batexpe.ParseRobinOutput(rresult.Output)
