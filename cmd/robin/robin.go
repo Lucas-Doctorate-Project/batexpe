@@ -131,6 +131,10 @@ func generateDescription(arguments map[string]interface{}) {
 }
 
 func main() {
+	os.Exit(mainReturnWithCode())
+}
+
+func mainReturnWithCode() int {
 	usage := `Robin manages the execution of one Batsim simulation.
 
 Usage:
@@ -197,7 +201,12 @@ Verbosity options:
   --json-logs                   Print information in JSON.
   --preview-on-error            Preview stdout and stderr of failed processes.`
 
-	arguments, _ := docopt.Parse(usage, nil, true, batexpe.Version(), false)
+	arguments, err := docopt.Parse(usage, nil, true, batexpe.Version(), false,
+		false)
+	if err != nil {
+		return 1
+	}
+
 	previewOnError := setupLogging(arguments)
 
 	log.WithFields(log.Fields{
@@ -238,5 +247,5 @@ Verbosity options:
 	}).Debug("Instance description read")
 
 	ret := batexpe.ExecuteOne(exp, previewOnError)
-	os.Exit(ret)
+	return ret
 }

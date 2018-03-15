@@ -22,6 +22,7 @@ stages:
   - build
   - test
   - test_repeat
+  - coverage
 
 ###############################################################################
 # Build stage
@@ -41,10 +42,13 @@ build:
     - go build -o ${CI_PROJECT_DIR}/artifacts/robin ./cmd/robin
     # Build robintest
     - go build -o ${CI_PROJECT_DIR}/artifacts/robintest ./cmd/robintest
+    # Build robin.cover (robin with robin/batexpe coverage)
+    - go test -c -o ${CI_PROJECT_DIR}/artifacts/robin.cover -covermode=count -coverpkg=./cmd/robin,./ ./cmd/robin
   artifacts:
     paths:
       - ${CI_PROJECT_DIR}/artifacts/robin
       - ${CI_PROJECT_DIR}/artifacts/robintest
+      - ${CI_PROJECT_DIR}/artifacts/robin.cover
 
 ###############################################################################
 # Test stage
@@ -95,5 +99,17 @@ batsched_timeout10:
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
     - seq 10 | xargs -Iz bats batsched_fast.bats
+  dependencies:
+    - build
+###############################################################################
+# Coverage
+###############################################################################
+
+coverage:
+  stage: coverage
+  script:
+    - cd ${CI_PROJECT_DIR}/test/robin
+    - robin.cover -test.coverprofile=meh batsched_ok.yaml
+    - cat meh
   dependencies:
     - build
