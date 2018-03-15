@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 	"gitlab.inria.fr/batsim/batexpe"
@@ -201,10 +202,26 @@ Verbosity options:
   --json-logs                   Print information in JSON.
   --preview-on-error            Preview stdout and stderr of failed processes.`
 
-	arguments, err := docopt.Parse(usage, nil, true, batexpe.Version(), false,
-		false)
+	ret := -1
+
+	parser := &docopt.Parser{
+		HelpHandler: func(err error, usage string) {
+			fmt.Println(usage)
+			if err != nil {
+				ret = 1
+			} else {
+				ret = 0
+			}
+		},
+		OptionsFirst: false,
+	}
+
+	arguments, err := parser.ParseArgs(usage, os.Args[1:], batexpe.Version())
+	if ret != -1 {
+		return ret
+	}
 	if err != nil {
-		return 1
+		return 2
 	}
 
 	previewOnError := setupLogging(arguments)
@@ -246,6 +263,6 @@ Verbosity options:
 		"failure timeout":    exp.FailureTimeout,
 	}).Debug("Instance description read")
 
-	ret := batexpe.ExecuteOne(exp, previewOnError)
+	ret = batexpe.ExecuteOne(exp, previewOnError)
 	return ret
 }
