@@ -13,7 +13,7 @@ variables:
 # Before script
 ###############################################################################
 before_script:
-  - export PATH="${CI_PROJECT_DIR}/artifacts:${PATH}"
+  - export PATH="${CI_PROJECT_DIR}/artifacts:/root/go/bin:${PATH}"
 
 ###############################################################################
 # Stages setup
