@@ -109,7 +109,8 @@ coverage:
   stage: coverage
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
+    - ./cover.bash
     - robin.cover -test.coverprofile=meh batsched_ok.yaml
-    - cat meh
+    - cat merged.covout
   dependencies:
     - build
