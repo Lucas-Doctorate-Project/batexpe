@@ -18,6 +18,9 @@ Robintest's public API includes:
 
 [//]: ==========================================================================
 ## [Unreleased]
+
+[//]: ==========================================================================
+## [0.2.0] - 2018-03-27
 ### Added
 - Robin: New command-line option '--preview-on-error'.  
   If set, robin prints a preview of a process's stdout and stderr on error.  
@@ -64,3 +67,6 @@ Robintest's public API includes:
 [//]: ==========================================================================
 [changelog]: http://keepachangelog.com/en/1.0.0/
 [semver]: http://semver.org/spec/v2.0.0.html
+
+[Unreleased]: https://github.com/oar-team/batsim/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/oar-team/batsim/compare/v0.1.0...v0.2.0
