@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/docopt/docopt-go"
+	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 	"gitlab.inria.fr/batsim/batexpe"
 	"os"

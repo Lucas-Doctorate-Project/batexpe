@@ -3,7 +3,7 @@ package batexpe
 import (
 	"fmt"
 	"github.com/anmitsu/go-shlex"
-	"github.com/docopt/docopt-go"
+	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 )
 
