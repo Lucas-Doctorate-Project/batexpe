@@ -23,3 +23,4 @@ RUN nix-env -i procps iproute2
 # Test and CI dependencies
 RUN nix-env -i gnugrep psmisc bats findutils gnused gawk
 RUN go get github.com/wadey/gocovmerge
+RUN go get github.com/axw/gocov/gocov

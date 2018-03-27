@@ -110,6 +110,10 @@ coverage:
   script:
     - cd ${CI_PROJECT_DIR}/test/robin
     - ./cover.bash
-    - cat merged.covout
+    - cat coverage-report.txt
+  artifacts:
+    paths:
+      - ${CI_PROJECT_DIR}/test/robin/merged.covout
+      - ${CI_PROJECT_DIR}/test/robin/coverage-report.txt
   dependencies:
     - build
