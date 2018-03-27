@@ -105,6 +105,7 @@ func ParseRobinOutput(output string) ([]interface{}, error) {
 	lines := strings.FieldsFunc(output, splitFn)
 
 	jsonLines := make([]interface{}, len(lines))
+	nbAppended := 0
 
 	for i := 0; i < len(lines); i++ {
 		log.WithFields(log.Fields{
@@ -114,13 +115,14 @@ func ParseRobinOutput(output string) ([]interface{}, error) {
 		// Parse line if it is not a coverage print
 		if lines[i] != "PASS" && !strings.HasPrefix(lines[i], "cover") &&
 			!strings.HasPrefix(lines[i], "Robin return code:") {
-			if err := json.Unmarshal([]byte(lines[i]), &jsonLines[i]); err != nil {
+			if err := json.Unmarshal([]byte(lines[i]), &jsonLines[nbAppended]); err != nil {
 				return nil, fmt.Errorf("Could not unmarshall JSON line: %s", lines[i])
 			}
+			nbAppended += 1
 		}
 	}
 
-	return jsonLines, nil
+	return jsonLines[:nbAppended], nil
 }
 
 func retrieveRobinReturnCodeInRobincoverOutput(output string) (int, error) {
