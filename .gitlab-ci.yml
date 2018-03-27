@@ -13,7 +13,13 @@ variables:
 # Before script
 ###############################################################################
 before_script:
-  - export PATH="${CI_PROJECT_DIR}/artifacts:/root/go/bin:${PATH}"
+  # Put batexpe source in the go source tree
+  - export CI_PROJECT_DIR_GOPATH="${GO_PATH}/src/${REPO_NAME}"
+  - mkdir -p ${CI_PROJECT_DIR_GOPATH}
+  - mv ${CI_PROJECT_DIR}/* ${CI_PROJECT_DIR_GOPATH}
+  - cd ${CI_PROJECT_DIR_GOPATH}
+  # Path on steroids
+  - export PATH="${CI_PROJECT_DIR_GOPATH}/artifacts:/root/go/bin:${PATH}"
 
 ###############################################################################
 # Stages setup
@@ -29,10 +35,6 @@ stages:
 build:
   stage: build
   script:
-    # Put batexpe source in the go source tree (so vendoring works as expected)
-    - mkdir -p ${GO_PATH}/src/${REPO_NAME}
-    - mv ${CI_PROJECT_DIR}/* ${GO_PATH}/src/${REPO_NAME}
-    - cd ${GO_PATH}/src/${REPO_NAME}
     # Go dependencies
     - go get .
     # Prepare artifacts
@@ -55,7 +57,7 @@ build:
 cli:
   stage: test
   script:
-    - cd ${CI_PROJECT_DIR}/test/robin
+    - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
     - bats robin_cli.bats
   dependencies:
     - build
@@ -63,7 +65,7 @@ cli:
 nosched:
   stage: test
   script:
-    - cd ${CI_PROJECT_DIR}/test/robin
+    - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
     - bats nosched.bats
   dependencies:
     - build
@@ -71,7 +73,7 @@ nosched:
 batsched:
   stage: test
   script:
-    - cd ${CI_PROJECT_DIR}/test/robin
+    - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
     - bats batsched_*.bats
 
 ###############################################################################
@@ -81,12 +83,12 @@ batsched:
 coverage:
   stage: coverage
   script:
-    - cd ${CI_PROJECT_DIR}/test/robin
+    - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
     - ./cover.bash
     - cat coverage-report.txt
   artifacts:
     paths:
-      - ${CI_PROJECT_DIR}/test/robin/merged.covout
-      - ${CI_PROJECT_DIR}/test/robin/coverage-report.txt
+      - ${CI_PROJECT_DIR_GOPATH}/test/robin/merged.covout
+      - ${CI_PROJECT_DIR_GOPATH}/test/robin/coverage-report.txt
   dependencies:
     - build
