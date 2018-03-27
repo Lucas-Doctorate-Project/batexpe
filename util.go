@@ -49,7 +49,7 @@ func PortFromBatSock(socket string) (port uint16, err error) {
 func PreviewFile(filename string, maxLines int64) (preview string, err error) {
 	// Retrieve the file length
 	wcCmd := exec.Command("wc")
-	wcCmd.Args = []string{"wc", "-l", filename}
+	wcCmd.Args = []string{wcCmd.Args[0], "-l", filename}
 
 	wcOut, err := wcCmd.Output()
 	if err != nil {
@@ -77,8 +77,8 @@ func PreviewFile(filename string, maxLines int64) (preview string, err error) {
 		// Only retrieve the first and last lines
 		// First lines
 		headCmd := exec.Command("head")
-		headCmd.Args = []string{"head", "-n", strconv.Itoa(int(maxLines / 2)),
-			filename}
+		headCmd.Args = []string{headCmd.Args[0], "-n",
+			strconv.Itoa(int(maxLines / 2)), filename}
 
 		headOut, err := headCmd.Output()
 		if err != nil {
@@ -88,8 +88,8 @@ func PreviewFile(filename string, maxLines int64) (preview string, err error) {
 
 		// Last lines
 		tailCmd := exec.Command("tail")
-		tailCmd.Args = []string{"tail", "-n", strconv.Itoa(int(maxLines / 2)),
-			filename}
+		tailCmd.Args = []string{tailCmd.Args[0], "-n",
+			strconv.Itoa(int(maxLines / 2)), filename}
 
 		tailOut, err := tailCmd.Output()
 		if err != nil {
@@ -112,7 +112,7 @@ func IsBatsimOrBatschedRunning() bool {
 	rBatsched := regexp.MustCompile(`(?m)^\S*\bbatsched.*$`)
 
 	psCmd := exec.Command("ps")
-	psCmd.Args = []string{"ps", "-e", "-o", "command"}
+	psCmd.Args = []string{psCmd.Args[0], "-e", "-o", "command"}
 
 	outBuf, err := psCmd.Output()
 	if err != nil {

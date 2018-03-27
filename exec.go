@@ -101,7 +101,7 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 	for {
 		// Retrieve running Batsim processes
 		psCmd := exec.Command("ps")
-		psCmd.Args = []string{"ps", "-e", "-o", "command"}
+		psCmd.Args = []string{psCmd.Args[0], "-e", "-o", "command"}
 
 		outBuf, err := psCmd.Output()
 		if err != nil {
@@ -150,7 +150,7 @@ func waitTcpPortAvailableSs(port uint16, onexit chan int) {
 
 	for {
 		ssCmd := exec.Command("ss")
-		ssCmd.Args = []string{"ss", "-tln"}
+		ssCmd.Args = []string{ssCmd.Args[0], "-tln"}
 
 		outBuf, err := ssCmd.Output()
 		if err != nil {
@@ -328,7 +328,8 @@ func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 		}).Fatal("Cannot create file")
 	}
 	cmd := exec.Command("bash")
-	cmd.Args = []string{"bash", "-eux", exp.OutputDir + "/cmd/batsim.bash"}
+	cmd.Args = []string{cmd.Args[0], "-eux",
+		exp.OutputDir + "/cmd/batsim.bash"}
 
 	// Log simulation output
 	batlog, err := os.Create(exp.OutputDir + "/log/batsim.log")
@@ -390,7 +391,8 @@ func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
 	}
 	cmds["Batsim"] = exec.Command("bash")
 	cmds["Batsim"].SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
-	cmds["Batsim"].Args = []string{"bash", "-eux", exp.OutputDir + "/cmd/batsim.bash"}
+	cmds["Batsim"].Args = []string{cmds["Batsim"].Args[0], "-eux",
+		exp.OutputDir + "/cmd/batsim.bash"}
 
 	err = ioutil.WriteFile(exp.OutputDir+"/cmd/sched.bash", []byte(exp.Schedcmd), 0755)
 	if err != nil {
@@ -401,7 +403,8 @@ func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
 	}
 	cmds["Scheduler"] = exec.Command("bash")
 	cmds["Scheduler"].SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
-	cmds["Scheduler"].Args = []string{"bash", "-eux", exp.OutputDir + "/cmd/sched.bash"}
+	cmds["Scheduler"].Args = []string{cmds["Scheduler"].Args[0], "-eux",
+		exp.OutputDir + "/cmd/sched.bash"}
 
 	// Log simulation output
 	batlog, err := os.Create(exp.OutputDir + "/log/batsim.log")
