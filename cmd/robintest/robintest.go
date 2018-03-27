@@ -149,7 +149,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 	if robinExpectation != EXPECT_NOTHING {
 		expectedRobinSuccess := robinExpectation == EXPECT_TRUE
 		expectedRobinKilled := robinExpectation == EXPECT_KILLED
-		robinSuccess := rresult.ReturnCode == 0
+		robinSuccess := rresult.Succeeded
 		robinKilled := rresult.Finished == false
 
 		if robinSuccess != expectedRobinSuccess {

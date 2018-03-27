@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -23,5 +24,6 @@ func TestRunMain(t *testing.T) {
 	os.Args = args
 
 	// To retrieve coverage results, os.Exit must NOT be called
-	mainReturnWithCode()
+	returnCode := mainReturnWithCode()
+	fmt.Println("Robin return code:", returnCode)
 }

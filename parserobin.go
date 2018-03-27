@@ -6,15 +6,16 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
 type RobinResult struct {
-	Finished   bool
-	ReturnCode int
-	Output     string
+	Finished  bool
+	Succeeded bool
+	Output    string
 }
 
 func RunRobin(descriptionFile, coverFile string,
@@ -61,7 +62,6 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 	}()
 
 	var rresult RobinResult
-	var execErr error
 
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
@@ -70,36 +70,31 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 			"timeout": timeout,
 		}).Info("Test timeout reached!")
 		rresult.Finished = false
-		rresult.ReturnCode = -1
+		rresult.Succeeded = false
 
 		KillProcess(robinPid)
-		execErr = <-done
-	case execErr = <-done:
+		<-done
+		rresult.Output = stdout.String()
+	case <-done:
+		rresult.Output = stdout.String()
 		rresult.Finished = true
-	}
 
-	if execErr != nil {
-		if exiterr, ok := execErr.(*exec.ExitError); ok {
-			// Exited with non-zero exit code
-			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-				rresult.ReturnCode = status.ExitStatus()
-			} else {
-				log.WithFields(log.Fields{
-					"command": cmd,
-					"err":     execErr,
-				}).Fatal("Cannot retrieve robin exit code (case 1)")
-			}
+		if coverFile == "" {
+			// robin is directly executed, its return code can be retrieved
+			rresult.Succeeded = cmd.ProcessState.Success()
 		} else {
-			log.WithFields(log.Fields{
-				"command": cmd,
-				"err":     execErr,
-			}).Fatal("Cannot retrieve robin exit code (case 2)")
+			// robin.cover is called. It should always return 0.
+			// Robin's return code should be written in the program output
+			returnCode, err :=
+				retrieveRobinReturnCodeInRobincoverOutput(rresult.Output)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err": err,
+				}).Fatal("Cannot retrieve return code from robin.cover output")
+			}
+			rresult.Succeeded = returnCode == 0
 		}
-	} else {
-		rresult.ReturnCode = 0
 	}
-
-	rresult.Output = stdout.String()
 	onexit <- rresult
 }
 
@@ -117,7 +112,8 @@ func ParseRobinOutput(output string) ([]interface{}, error) {
 		}).Debug("Parsing line")
 
 		// Parse line if it is not a coverage print
-		if lines[i] != "PASS" && !strings.HasPrefix(lines[i], "cover") {
+		if lines[i] != "PASS" && !strings.HasPrefix(lines[i], "cover") &&
+			!strings.HasPrefix(lines[i], "Robin return code:") {
 			if err := json.Unmarshal([]byte(lines[i]), &jsonLines[i]); err != nil {
 				return nil, fmt.Errorf("Could not unmarshall JSON line: %s", lines[i])
 			}
@@ -125,6 +121,29 @@ func ParseRobinOutput(output string) ([]interface{}, error) {
 	}
 
 	return jsonLines, nil
+}
+
+func retrieveRobinReturnCodeInRobincoverOutput(output string) (int, error) {
+	r := regexp.MustCompile(`Robin return code:\s*(?P<returnCode>\d+)\s*`)
+
+	match := r.FindStringSubmatch(output)
+	if match == nil {
+		return -1, fmt.Errorf("Return line not found")
+	}
+
+	result := make(map[string]string)
+	for i, name := range r.SubexpNames() {
+		if i != 0 && name != "" {
+			result[name] = match[i]
+		}
+	}
+
+	returnCode, err := strconv.ParseInt(result["returnCode"], 10, 32)
+	if err != nil {
+		return -1, fmt.Errorf("Cannot convert return code %v to int",
+			result["returnCode"])
+	}
+	return int(returnCode), nil
 }
 
 func WasBatsimSuccessful(robinJsonLines []interface{}) (successful, killed bool) {
