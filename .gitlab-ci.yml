@@ -21,7 +21,6 @@ before_script:
 stages:
   - build
   - test
-  - test_repeat
   - coverage
 
 ###############################################################################
@@ -75,32 +74,6 @@ batsched:
     - cd ${CI_PROJECT_DIR}/test/robin
     - bats batsched_*.bats
 
-###############################################################################
-# Angry test stage
-###############################################################################
-nosched100:
-  stage: test_repeat
-  script:
-    - cd ${CI_PROJECT_DIR}/test/robin
-    - seq 100 | xargs -Iz bats nosched.bats
-  dependencies:
-    - build
-
-batsched_fast50:
-  stage: test_repeat
-  script:
-    - cd ${CI_PROJECT_DIR}/test/robin
-    - seq 50 | xargs -Iz bats batsched_fast.bats
-  dependencies:
-    - build
-
-batsched_timeout10:
-  stage: test_repeat
-  script:
-    - cd ${CI_PROJECT_DIR}/test/robin
-    - seq 10 | xargs -Iz bats batsched_fast.bats
-  dependencies:
-    - build
 ###############################################################################
 # Coverage
 ###############################################################################
