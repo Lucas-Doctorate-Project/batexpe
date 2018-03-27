@@ -14,7 +14,7 @@ go get gitlab.inria.fr/batsim/batexpe/cmd/robintest
 ### Via nix
 ```bash
 git clone https://gitlab.inria.fr/vreis/datamove-nix.git ./datamovepkgs
-nix-env --file ./datamovepkgs --install batexpe
+nix-env --file ./datamovepkgs --install --attr batexpe
 ```
 
 ## Proposed tools
