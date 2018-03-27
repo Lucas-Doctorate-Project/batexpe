@@ -20,5 +20,5 @@ gocovmerge *.covout > merged.covout
 # Get a readable coverage report
 gocov convert merged.covout | gocov report > coverage-report.txt
 
-# Revert .bats files to their previous state
-git checkout -- *.bats
+# Revert .bats files to their previous state (if in a git repo)
+git checkout -- *.bats || true
