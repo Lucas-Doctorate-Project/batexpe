@@ -86,9 +86,10 @@ coverage:
     - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
     - ./cover.bash
     - cat coverage-report.txt
+    - cp merged.covout coverage-report.txt ${CI_PROJECT_DIR_GOPATH}/
   artifacts:
     paths:
-      - ${CI_PROJECT_DIR_GOPATH}/test/robin/merged.covout
-      - ${CI_PROJECT_DIR_GOPATH}/test/robin/coverage-report.txt
+      - ${CI_PROJECT_DIR_GOPATH}/merged.covout
+      - ${CI_PROJECT_DIR_GOPATH}/coverage-report.txt
   dependencies:
     - build
