@@ -4,8 +4,11 @@ import (
 	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 	"gitlab.inria.fr/batsim/batexpe"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -27,6 +30,7 @@ const (
 	UNEXPECTED_CONTEXT_CLEANLINESS
 	UNEXPECTED_CONTEXT_CLEANLINESS_AT_BEGIN
 	UNEXPECTED_CONTEXT_CLEANLINESS_AT_END
+	RESULT_CHECK_FAILED
 )
 
 func main() {
@@ -44,6 +48,7 @@ Usage:
   			[(--expect-ctx-clean | --expect-ctx-busy)]
   			[(--expect-ctx-clean-at-begin | --expect-ctx-busy-at-begin)]
   			[(--expect-ctx-clean-at-end | --expect-ctx-busy-at-end)]
+  			[--result-check-script=<file>]
   			[--cover=<file>]
 
   robintest -h | --help
@@ -117,15 +122,21 @@ Usage:
 		coverFile = arguments["--cover"].(string)
 	}
 
+	resultCheckScript := ""
+	if arguments["--result-check-script"] != nil {
+		resultCheckScript = arguments["--result-check-script"].(string)
+	}
+
 	testResult := RobinTest(arguments["<description-file>"].(string),
-		coverFile, testTimeout,
+		coverFile, resultCheckScript, testTimeout,
 		robinExpectation, batsimExpectation, schedExpectation,
 		ctxExpectation, ctxExpectationAtBegin, ctxExpectationAtEnd)
 
 	os.Exit(testResult)
 }
 
-func RobinTest(descriptionFile, coverFile string, testTimeout float64,
+func RobinTest(descriptionFile, coverFile, resultCheckScript string,
+	testTimeout float64,
 	robinExpectation, batsimExpectation, schedExpectation,
 	ctxExpectation, ctxExpectationAtBegin, ctxExpectationAtEnd int) int {
 
@@ -274,5 +285,82 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 		}
 	}
 
+	// Run check script if everything went as expected so far
+	if robintestReturnValue == 0 {
+		if resultCheckScript != "" {
+			// First, we need to retrieve Batsim output prefix.
+			// To do so, we can parse the batsim command defined in
+			// the robin description file.
+			byt, err := ioutil.ReadFile(descriptionFile)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err":      err,
+					"filename": descriptionFile,
+				}).Error("Cannot open description file")
+				return RESULT_CHECK_FAILED
+			}
+
+			exp := batexpe.FromYaml(string(byt))
+			batargs, err := batexpe.ParseBatsimCommand(exp.Batcmd)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err": err,
+				}).Error("Cannot parse Batsim command")
+				return RESULT_CHECK_FAILED
+			}
+
+			checkScriptSuccessful, err := RunCheckScript(resultCheckScript,
+				exp.OutputDir, batargs.ExportPrefix, testTimeout)
+			if err != nil {
+				return RESULT_CHECK_FAILED
+			}
+
+			if !checkScriptSuccessful {
+				robintestReturnValue = RESULT_CHECK_FAILED
+			}
+		}
+	}
+
 	return robintestReturnValue
+}
+
+func RunCheckScript(resultCheckScript, robinOutputDir, batsimExportPrefix string,
+	checkTimeout float64) (bool, error) {
+	cmd := exec.Command(resultCheckScript)
+	cmd.Args = []string{cmd.Args[0], batsimExportPrefix}
+
+	checkout, err := os.Create(robinOutputDir + "/log/check.out.log")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"filename": robinOutputDir + "/log/check.out.log",
+			"err":      err,
+		}).Error("Cannot create file")
+		return false, err
+	}
+	defer checkout.Close()
+	cmd.Stdout = checkout
+
+	checkerr, err := os.Create(robinOutputDir + "/log/check.err.log")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"filename": robinOutputDir + "/log/check.err.log",
+			"err":      err,
+		}).Error("Cannot create file")
+		return false, err
+	}
+	defer checkerr.Close()
+	cmd.Stderr = checkerr
+
+	start := make(chan batexpe.CmdFinishedMsg)
+	termination := make(chan batexpe.CmdFinishedMsg)
+
+	go batexpe.ExecuteTimeout("Check", strings.Join(cmd.Args, " "),
+		"/dev/null",
+		robinOutputDir+"/log/check.out.log",
+		robinOutputDir+"/log/check.err.log",
+		"Check", cmd, checkTimeout, start, termination, true)
+
+	<-start
+	finish1 := <-termination
+	return finish1.State == batexpe.SUCCESS, nil
 }
