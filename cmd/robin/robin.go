@@ -244,7 +244,10 @@ Verbosity options:
 
 	// Generate mode?
 	if arguments["generate"] == true {
-		generateDescription(arguments)
+		err := generateDescription(arguments)
+		if err != nil {
+			return 1
+		}
 	}
 
 	// Execution mode.
