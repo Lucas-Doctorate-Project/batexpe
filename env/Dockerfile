@@ -24,3 +24,4 @@ RUN nix-env -i procps iproute2
 RUN nix-env -i gnugrep psmisc bats findutils gnused gawk python3
 RUN go get github.com/wadey/gocovmerge
 RUN go get github.com/axw/gocov/gocov
+RUN go get github.com/sahilm/yamldiff
