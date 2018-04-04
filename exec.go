@@ -97,7 +97,7 @@ func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) {
 }
 
 func waitNoConflictingBatsim(port uint16, onexit chan int) {
-	r := regexp.MustCompile(`^\s*[[:^blank:]]*batsim\s+.+$`)
+	r := regexp.MustCompile(`(?m)^\S*\bbatsim\s+.*$`)
 	for {
 		// Retrieve running Batsim processes
 		psCmd := exec.Command("ps")
@@ -113,6 +113,11 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 
 		conflict := false
 		for _, batcmd := range r.FindAllString(string(outBuf), -1) {
+
+			log.WithFields(log.Fields{
+				"batcmd": batcmd,
+			}).Debug("Found a running batsim")
+
 			batargs, err := ParseBatsimCommand(batcmd)
 			if err != nil {
 				log.WithFields(log.Fields{
