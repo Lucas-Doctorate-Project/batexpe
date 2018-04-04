@@ -39,7 +39,8 @@ func setupLogging(arguments map[string]interface{}) (previewOnError bool) {
 	return previewOnError
 }
 
-func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
+func ExperimentFromArgs(arguments map[string]interface{}) (batexpe.Experiment,
+	error) {
 	var exp batexpe.Experiment
 	var err error
 
@@ -71,7 +72,8 @@ func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
 			log.WithFields(log.Fields{
 				"err": err,
 				"--simulation-timeout": arguments["--simulation-timeout"].(string),
-			}).Fatal("Invalid simulation timeout")
+			}).Error("Invalid simulation timeout")
+			return exp, fmt.Errorf("Invalid simulation timeout")
 		}
 	}
 
@@ -82,7 +84,8 @@ func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
 			log.WithFields(log.Fields{
 				"err":             err,
 				"--ready-timeout": arguments["--ready-timeout"].(string),
-			}).Fatal("Invalid ready timeout")
+			}).Error("Invalid ready timeout")
+			return exp, fmt.Errorf("Invalid ready timeout")
 		}
 	}
 
@@ -93,7 +96,8 @@ func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
 			log.WithFields(log.Fields{
 				"err":               err,
 				"--success-timeout": arguments["--success-timeout"].(string),
-			}).Fatal("Invalid success timeout")
+			}).Error("Invalid success timeout")
+			return exp, fmt.Errorf("Invalid success timeout")
 		}
 	}
 
@@ -104,7 +108,8 @@ func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
 			log.WithFields(log.Fields{
 				"err":               err,
 				"--failure-timeout": arguments["--failure-timeout"].(string),
-			}).Fatal("Invalid failure timeout")
+			}).Error("Invalid failure timeout")
+			return exp, fmt.Errorf("Invalid failure timeout")
 		}
 	}
 
@@ -113,22 +118,29 @@ func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
 		"expe": exp,
 	}).Debug("arguments -> expe")
 
-	return exp
+	return exp, nil
 }
 
-func generateDescription(arguments map[string]interface{}) {
-	exp := ExperimentFromArgs(arguments)
+func generateDescription(arguments map[string]interface{}) error {
+	exp, err := ExperimentFromArgs(arguments)
+	if err != nil {
+		return err
+	}
+
 	yam := batexpe.ToYaml(exp)
 
 	fil := arguments["<description-file>"].(string)
 
-	err := ioutil.WriteFile(fil, []byte(yam), 0644)
+	err = ioutil.WriteFile(fil, []byte(yam), 0644)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err":      err,
 			"filename": fil,
-		}).Fatal("Cannot write file")
+		}).Error("Cannot write file")
+		return fmt.Errorf("Cannot write file")
 	}
+
+	return nil
 }
 
 func main() {
@@ -245,12 +257,16 @@ Verbosity options:
 			log.WithFields(log.Fields{
 				"err":      err,
 				"filename": fil,
-			}).Fatal("Cannot open description file")
+			}).Error("Cannot open description file")
+			return 1
 		}
 
 		exp = batexpe.FromYaml(string(byt))
 	} else {
-		exp = ExperimentFromArgs(arguments)
+		exp, err = ExperimentFromArgs(arguments)
+		if err != nil {
+			return 1
+		}
 	}
 
 	log.WithFields(log.Fields{
