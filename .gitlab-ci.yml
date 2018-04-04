@@ -81,6 +81,7 @@ batsched:
 
 robintest:
   stage: test
+  script:
     - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
     - bats robintest*.bats
   dependencies:
