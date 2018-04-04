@@ -64,3 +64,22 @@
     [[ "${lines[0]}" =~ 'Unexpected sched success state' ]]
     [[ "${lines[1]}" =~ 'Unexpected sched presence state' ]]
 }
+
+# Context expectation
+@test "robintest-efail-context-busy" {
+    run robintest batsched_ok.yaml --test-timeout=10 --expect-ctx-busy
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ "Unexpected context cleanliness during robin's execution" ]]
+}
+
+@test "robintest-efail-context-busy-begin" {
+    run robintest batsched_ok.yaml --test-timeout=10 --expect-ctx-busy-at-begin
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ "Unexpected context cleanliness before robin's execution" ]]
+}
+
+@test "robintest-efail-context-busy-end" {
+    run robintest batsched_ok.yaml --test-timeout=10 --expect-ctx-busy-at-end
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ "Unexpected context cleanliness after robin's execution" ]]
+}
