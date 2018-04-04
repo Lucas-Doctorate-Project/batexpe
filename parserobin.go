@@ -33,11 +33,11 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 	cmd := exec.Command("robin")
 
 	if coverFile == "" {
-		cmd.Args = []string{"robin", "--json-logs", descriptionFile}
+		cmd.Args = []string{cmd.Args[0], "--json-logs", descriptionFile}
 	} else {
 		testArg := "-test.coverprofile=" + coverFile
 		cmd = exec.Command("robin.cover")
-		cmd.Args = []string{"robin.cover", testArg, descriptionFile,
+		cmd.Args = []string{cmd.Args[0], testArg, descriptionFile,
 			"--json-logs"}
 	}
 
