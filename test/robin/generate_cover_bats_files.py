@@ -6,6 +6,11 @@ import re
 #############
 
 def generate_bats_file(input_filename, output_filename):
+    options_to_bypass = ['--help', '-h', '--version',
+                         '--output-dir', '--batcmd', '--schedcmd',
+                         '--simulation-timeout', '--ready-timeout',
+                         '--success-timeout', '--failure-timeout']
+
     with open(input_filename, "r") as in_file:
         content = [x.rstrip() for x in in_file.readlines()]
 
@@ -24,13 +29,15 @@ def generate_bats_file(input_filename, output_filename):
                         "run robin.cover "
                         "-test.coverprofile={f}.r.{c}.covout".format(
                             f=input_filename, c=repl_count), line)
-                    line = re.sub("""--help\\b""", "__bypass--help", line)
-                    line = re.sub("""-h\\b""", "__bypass-h", line)
-                    line = re.sub("""--version\\b""", "__bypass--version", line)
                     repl_count += 1
                 elif '[ "$status" -ne 0 ]' in line:
                     line = re.sub("""\[ "\$status" -ne 0 \]""",
                         '[ "$status" -eq 0 ]', line)
+
+                for option in options_to_bypass:
+                    line = re.sub(option + '\\b',
+                                  '__bypass' + option, line)
+
                 out_file.write("{}\n".format(line))
 
 ##########
