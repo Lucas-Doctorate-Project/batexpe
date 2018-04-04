@@ -20,20 +20,6 @@ const (
 	EXPECT_KILLED
 )
 
-const (
-	UNEXPECTED_ROBIN_SUCCESS_STATE int = 1 << iota
-	UNEXPECTED_ROBIN_KILL_STATE
-	UNEXPECTED_BATSIM_SUCCESS_STATE
-	UNEXPECTED_BATSIM_KILL_STATE
-	UNEXPECTED_SCHED_SUCCESS_STATE
-	UNEXPECTED_SCHED_PRESENCE_STATE
-	UNEXPECTED_SCHED_KILL_STATE
-	UNEXPECTED_CONTEXT_CLEANLINESS
-	UNEXPECTED_CONTEXT_CLEANLINESS_AT_BEGIN
-	UNEXPECTED_CONTEXT_CLEANLINESS_AT_END
-	RESULT_CHECK_FAILED
-)
-
 func setupLogging(arguments map[string]interface{}) {
 	log.SetOutput(os.Stdout)
 
@@ -213,7 +199,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				"got":      robinSuccess,
 			}).Error("Unexpected robin success state")
 
-			robintestReturnValue += UNEXPECTED_ROBIN_SUCCESS_STATE
+			robintestReturnValue = 1
 		}
 
 		if robinKilled != expectedRobinKilled {
@@ -222,7 +208,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				"got":      robinKilled,
 			}).Error("Unexpected robin kill state")
 
-			robintestReturnValue += UNEXPECTED_ROBIN_KILL_STATE
+			robintestReturnValue = 1
 		}
 	}
 
@@ -238,7 +224,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				"got":      batsimSuccess,
 			}).Error("Unexpected batsim success state")
 
-			robintestReturnValue += UNEXPECTED_BATSIM_SUCCESS_STATE
+			robintestReturnValue = 1
 		}
 
 		if batsimKilled != expectedBatsimKilled {
@@ -247,7 +233,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				"got":      batsimKilled,
 			}).Error("Unexpected batsim kill state")
 
-			robintestReturnValue += UNEXPECTED_BATSIM_KILL_STATE
+			robintestReturnValue = 1
 		}
 	}
 
@@ -264,7 +250,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				"got":      schedSuccess,
 			}).Error("Unexpected sched success state")
 
-			robintestReturnValue += UNEXPECTED_SCHED_SUCCESS_STATE
+			robintestReturnValue = 1
 		}
 
 		if schedPresence != expectedSchedPresence {
@@ -273,7 +259,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				"got":      schedPresence,
 			}).Error("Unexpected sched presence state")
 
-			robintestReturnValue += UNEXPECTED_SCHED_PRESENCE_STATE
+			robintestReturnValue = 1
 		}
 
 		if schedKilled != expectedSchedKilled {
@@ -282,7 +268,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				"got":      schedKilled,
 			}).Error("Unexpected sched kill state")
 
-			robintestReturnValue += UNEXPECTED_SCHED_KILL_STATE
+			robintestReturnValue = 1
 		}
 	}
 
@@ -297,7 +283,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				"got":      contextClean,
 			}).Error("Unexpected context cleanliness during robin's execution")
 
-			robintestReturnValue += UNEXPECTED_CONTEXT_CLEANLINESS
+			robintestReturnValue = 1
 		}
 	}
 
@@ -311,7 +297,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				"got":      ctxCleanAtBegin,
 			}).Error("Unexpected context cleanliness before robin's execution")
 
-			robintestReturnValue += UNEXPECTED_CONTEXT_CLEANLINESS_AT_BEGIN
+			robintestReturnValue = 1
 		}
 	}
 
@@ -325,7 +311,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				"got":      ctxCleanAtEnd,
 			}).Error("Unexpected context cleanliness after robin's execution")
 
-			robintestReturnValue += UNEXPECTED_CONTEXT_CLEANLINESS_AT_END
+			robintestReturnValue = 1
 		}
 	}
 
@@ -341,7 +327,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 					"err":      err,
 					"filename": descriptionFile,
 				}).Error("Cannot open description file")
-				return RESULT_CHECK_FAILED
+				return 1
 			}
 
 			exp := batexpe.FromYaml(string(byt))
@@ -350,17 +336,17 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				log.WithFields(log.Fields{
 					"err": err,
 				}).Error("Cannot parse Batsim command")
-				return RESULT_CHECK_FAILED
+				return 1
 			}
 
 			checkScriptSuccessful, err := RunCheckScript(resultCheckScript,
 				exp.OutputDir, batargs.ExportPrefix, testTimeout)
 			if err != nil {
-				return RESULT_CHECK_FAILED
+				return 1
 			}
 
 			if !checkScriptSuccessful {
-				robintestReturnValue = RESULT_CHECK_FAILED
+				robintestReturnValue = 1
 			}
 		}
 	}
