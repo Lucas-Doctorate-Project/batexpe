@@ -52,7 +52,7 @@ func PrepareDirs(exp Experiment) {
 	}
 }
 
-func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) {
+func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) error {
 	port, err := PortFromBatSock(batargs.Socket)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -87,13 +87,16 @@ func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) {
 				"batsim command":             exp.Batcmd,
 				"socket in use":              socketInUse,
 				"conflicting batsim running": anotherBatsim,
-			}).Fatal("Context remains invalid")
+			}).Error("Context remains invalid")
+			return fmt.Errorf("Context remanis invalid")
 		case <-sockChan:
 			socketInUse = false
 		case <-batChan:
 			anotherBatsim = false
 		}
 	}
+
+	return nil
 }
 
 func waitNoConflictingBatsim(port uint16, onexit chan int) {
@@ -584,7 +587,10 @@ func ExecuteOne(exp Experiment, previewOnError bool) int {
 		}
 
 		// Wait for context to be ready (open sockets, batsim processes...)
-		waitReadyForSimulation(exp, batargs)
+		err := waitReadyForSimulation(exp, batargs)
+		if err != nil {
+			return 1
+		}
 
 		return executeBatsimAndSched(exp, previewOnError)
 	}
