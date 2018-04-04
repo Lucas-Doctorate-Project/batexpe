@@ -78,3 +78,82 @@
     echo ${lines}
     [[ "${lines}" = '' ]]
 }
+
+@test "cli-robin-generate-bad-description" {
+    run robin generate /tmp/robin_generated.yaml \
+                   --output-dir='/tmp/robin/batsched_ok' \
+                   --batcmd='batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsched_ok/out' \
+                   --schedcmd='batsched' \
+                   --simulation-timeout='not a valid simeout' \
+                   --ready-timeout=5 \
+                   --success-timeout=5 \
+                   --failure-timeout=0
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ 'Invalid simulation timeout' ]]
+}
+
+@test "cli-robin-generate-bad-outputfile" {
+    run robin generate /this/file/should/not/be/writable.yaml
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ 'Cannot write file' ]]
+}
+
+# run without description file
+@test "cli-robin-nodescfile-ok" {
+    run robin --output-dir='/tmp/robin/batsim_nosched_ok' \
+              --batcmd='batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsim_nosched_ok/out --batexec' \
+              --schedcmd='' \
+              --simulation-timeout=30 \
+              --ready-timeout=5 \
+              --success-timeout=5 \
+              --failure-timeout=0
+    [ "$status" -eq 0 ]
+}
+
+@test "cli-robin-nodescfile-bad-simu-timeout" {
+    run robin --output-dir='/tmp/robin/batsim_nosched_ok' \
+              --batcmd='batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsim_nosched_ok/out --batexec' \
+              --schedcmd='' \
+              --simulation-timeout='not a valid simeout' \
+              --ready-timeout=5 \
+              --success-timeout=5 \
+              --failure-timeout=0
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ 'Invalid simulation timeout' ]]
+}
+
+@test "cli-robin-nodescfile-bad-ready-timeout" {
+    run robin --output-dir='/tmp/robin/batsim_nosched_ok' \
+              --batcmd='batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsim_nosched_ok/out --batexec' \
+              --schedcmd='' \
+              --simulation-timeout=30 \
+              --ready-timeout='not a valid simeout' \
+              --success-timeout=5 \
+              --failure-timeout=0
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ 'Invalid ready timeout' ]]
+}
+
+@test "cli-robin-nodescfile-bad-success-timeout" {
+    run robin --output-dir='/tmp/robin/batsim_nosched_ok' \
+              --batcmd='batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsim_nosched_ok/out --batexec' \
+              --schedcmd='' \
+              --simulation-timeout=30 \
+              --ready-timeout=5 \
+              --success-timeout='not a valid simeout' \
+              --failure-timeout=0
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ 'Invalid success timeout' ]]
+}
+
+@test "cli-robin-nodescfile-bad-failure-timeout" {
+    run robin --output-dir='/tmp/robin/batsim_nosched_ok' \
+              --batcmd='batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsim_nosched_ok/out --batexec' \
+              --schedcmd='' \
+              --simulation-timeout=30 \
+              --ready-timeout=5 \
+              --success-timeout=5 \
+              --failure-timeout='not a valid simeout'
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ 'Invalid failure timeout' ]]
+}
