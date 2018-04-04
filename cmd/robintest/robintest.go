@@ -34,6 +34,10 @@ const (
 )
 
 func main() {
+	os.Exit(mainReturnWithCode())
+}
+
+func mainReturnWithCode() int {
 	usage := `Tests one robin execution.
 
 Usage: 
@@ -132,7 +136,7 @@ Usage:
 		robinExpectation, batsimExpectation, schedExpectation,
 		ctxExpectation, ctxExpectationAtBegin, ctxExpectationAtEnd)
 
-	os.Exit(testResult)
+	return testResult
 }
 
 func RobinTest(descriptionFile, coverFile, resultCheckScript string,

@@ -43,13 +43,16 @@ build:
     - go build -o ${CI_PROJECT_DIR}/artifacts/robin ./cmd/robin
     # Build robintest
     - go build -o ${CI_PROJECT_DIR}/artifacts/robintest ./cmd/robintest
-    # Build robin.cover (robin with robin/batexpe coverage)
-    - go test -c -o ${CI_PROJECT_DIR}/artifacts/robin.cover -covermode=count -coverpkg=./cmd/robin,./ ./cmd/robin
+    # Build robin.cover (robin with coverage)
+    - go test -c -o ${CI_PROJECT_DIR}/artifacts/robin.cover -covermode=count -coverpkg=./,./cmd/robin,./cmd/robintest ./cmd/robin
+    # Build robintest.cover (robintest with coverage)
+    - go test -c -o ${CI_PROJECT_DIR}/artifacts/robintest.cover -covermode=count -coverpkg=./,./cmd/robin,./cmd/robintest ./cmd/robintest
   artifacts:
     paths:
       - ${CI_PROJECT_DIR}/artifacts/robin
       - ${CI_PROJECT_DIR}/artifacts/robintest
       - ${CI_PROJECT_DIR}/artifacts/robin.cover
+      - ${CI_PROJECT_DIR}/artifacts/robintest.cover
 
 ###############################################################################
 # Test stage
