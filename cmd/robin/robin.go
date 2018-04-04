@@ -228,12 +228,9 @@ Verbosity options:
 		OptionsFirst: false,
 	}
 
-	arguments, err := parser.ParseArgs(usage, os.Args[1:], batexpe.Version())
+	arguments, _ := parser.ParseArgs(usage, os.Args[1:], batexpe.Version())
 	if ret != -1 {
 		return ret
-	}
-	if err != nil {
-		return 2
 	}
 
 	previewOnError := setupLogging(arguments)
@@ -266,6 +263,7 @@ Verbosity options:
 
 		exp = batexpe.FromYaml(string(byt))
 	} else {
+		var err error
 		exp, err = ExperimentFromArgs(arguments)
 		if err != nil {
 			return 1
