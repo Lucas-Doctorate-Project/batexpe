@@ -61,7 +61,7 @@ cli:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
-    - bats *_cli.bats
+    - bats robin_cli.bats
   dependencies:
     - build
 
@@ -78,6 +78,13 @@ batsched:
   script:
     - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
     - bats batsched_*.bats
+
+robintest:
+  stage: test
+    - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
+    - bats robintest*.bats
+  dependencies:
+    - build
 
 ###############################################################################
 # Coverage

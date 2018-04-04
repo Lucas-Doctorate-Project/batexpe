@@ -48,7 +48,10 @@ def generate_bats_file(input_filename, output_filename):
 ROBINTEST_FILES = ["batsched_fast.bats",
                    "batsched_timeout.bats",
                    "nosched.bats",
-                   "robintest_cli.bats"]
+                   "robintest_cli.bats",
+                   "robintest_expectedfail.bats",
+                   "robintest_expectedfail_timeout.bats"
+                  ]
 ROBIN_FILES = ["robin_cli.bats"]
 
 for robintest_file in ROBINTEST_FILES + ROBIN_FILES:
