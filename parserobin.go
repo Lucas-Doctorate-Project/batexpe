@@ -82,6 +82,10 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 		if coverFile == "" {
 			// robin is directly executed, its return code can be retrieved
 			rresult.Succeeded = cmd.ProcessState.Success()
+
+			log.WithFields(log.Fields{
+				"succeeded": rresult.Succeeded,
+			}).Debug("Robin finished")
 		} else {
 			// robin.cover is called. It should always return 0.
 			// Robin's return code should be written in the program output
@@ -92,6 +96,10 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 					"err": err,
 				}).Fatal("Cannot retrieve return code from robin.cover output")
 			}
+
+			log.WithFields(log.Fields{
+				"returnCode": returnCode,
+			}).Debug("Retrieved robin return code")
 			rresult.Succeeded = returnCode == 0
 		}
 	}

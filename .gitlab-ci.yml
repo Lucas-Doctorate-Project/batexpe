@@ -61,7 +61,7 @@ cli:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
-    - bats robin_cli.bats
+    - bats *_cli.bats
   dependencies:
     - build
 

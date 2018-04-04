@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 	"gitlab.inria.fr/batsim/batexpe"
@@ -33,6 +34,22 @@ const (
 	RESULT_CHECK_FAILED
 )
 
+func setupLogging(arguments map[string]interface{}) {
+	log.SetOutput(os.Stdout)
+
+	customFormatter := new(log.TextFormatter)
+	customFormatter.TimestampFormat = "2006-01-02 15:04:05.000"
+	customFormatter.FullTimestamp = true
+	customFormatter.QuoteEmptyFields = true
+	log.SetFormatter(customFormatter)
+
+	if arguments["--debug"] == true {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+}
+
 func main() {
 	os.Exit(mainReturnWithCode())
 }
@@ -54,11 +71,30 @@ Usage:
   			[(--expect-ctx-clean-at-end | --expect-ctx-busy-at-end)]
   			[--result-check-script=<file>]
   			[--cover=<file>]
-
+  			[--debug]
   robintest -h | --help
   robintest --version`
 
-	arguments, _ := docopt.Parse(usage, nil, true, batexpe.Version(), false)
+	ret := -1
+
+	parser := &docopt.Parser{
+		HelpHandler: func(err error, usage string) {
+			fmt.Println(usage)
+			if err != nil {
+				ret = 1
+			} else {
+				ret = 0
+			}
+		},
+		OptionsFirst: false,
+	}
+
+	arguments, _ := parser.ParseArgs(usage, os.Args[1:], batexpe.Version())
+	if ret != -1 {
+		return ret
+	}
+
+	setupLogging(arguments)
 
 	// Has robin been successful? (returned 0 before test timeout)
 	robinExpectation := EXPECT_NOTHING
@@ -118,7 +154,11 @@ Usage:
 
 	testTimeout, err := strconv.ParseFloat(arguments["--test-timeout"].(string), 64)
 	if err != nil {
-		panic("Invalid test-timeout value: Cannot convert to float")
+		log.WithFields(log.Fields{
+			"err":            err,
+			"--test-timeout": arguments["--test-timeout"].(string),
+		}).Error("Invalid test timeout")
+		return 1
 	}
 
 	coverFile := ""
