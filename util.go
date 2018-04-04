@@ -107,7 +107,6 @@ func PreviewFile(filename string, maxLines int64) (preview string, err error) {
 
 func IsBatsimOrBatschedRunning() bool {
 	// This function directly searches for batsim or batsched processes.
-	//r := regexp.MustCompile(`^[[:^blank:]]*(?:\bbatsim )|(?:\bbatsched\b)$`)
 	rBatsim := regexp.MustCompile(`(?m)^\S*\bbatsim .*$`)
 	rBatsched := regexp.MustCompile(`(?m)^\S*\bbatsched.*$`)
 
