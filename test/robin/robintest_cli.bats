@@ -35,3 +35,20 @@
     run robintest batsim_nosched_ok.yaml --test-timeout=10 --debug
     [ "$status" -eq 0 ]
 }
+
+@test "cli-robintest-resultcheckscript-success" {
+    run robintest batsim_nosched_ok.yaml --test-timeout=10 --result-check-script=./checkscript_success.bash
+    [ "$status" -eq 0 ]
+}
+
+@test "cli-robintest-resultcheckscript-failure" {
+    run robintest batsim_nosched_ok.yaml --test-timeout=10 --result-check-script=./checkscript_failure.bash
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ 'Check subprocess failed' ]]
+}
+
+@test "cli-robintest-resultcheckscript-badfile" {
+    run robintest batsim_nosched_ok.yaml --test-timeout=10 --result-check-script=/does/not/exist.bash
+    [ "$status" -ne 0 ]
+    [[ "${lines[0]}" =~ 'Could not start Check subprocess' ]]
+}
