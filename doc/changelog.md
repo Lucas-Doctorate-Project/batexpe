@@ -20,6 +20,36 @@ Robintest's public API includes:
 ## [Unreleased]
 
 [//]: ==========================================================================
+## [0.3.0] - 2018-04-08
+### Added
+- More tests, coverage reports in CI.
+- robintest can now execute a check script with the ``--result-check-script``
+  option. Such script is called if all expectations have been met. The
+  script is called with batsim's export prefix as first argument.
+- robintest now supports a ``--debug`` logging option.
+- robintest can now be built with coverage support.
+- robintest can now call ``robin.test`` (robin with coverage support) via
+  the ``--cover`` option.
+- More batexpe functions and types are now public:
+  - Types: ``CmdFinishedMsg``
+  - Functions: ``ExecuteTimeout``
+
+### Changed
+- Most robin functions should now return an error.
+- ``RobinResult`` struct now has a ``Succeeded`` boolean instead of a
+  ``ReturnCode`` integer.
+
+### Fixed
+- robin tried to execute the instance even with the ``generate`` subcommand.  
+  robin should now return after generating the description file.
+- robintest return value could be 0 while an expection was not met.  
+  robintest should now return 1 when expectations are not met.
+- robintest did not retrieve robin's return code correctly.
+- batexpe code to determine whether conflicting batsim instances are running
+  did not work: Some batsim instances were not found.  
+  The regexp has been improved and they seem to be detected now.
+
+[//]: ==========================================================================
 ## [0.2.0] - 2018-03-27
 ### Added
 - Robin: New command-line option '--preview-on-error'.  
@@ -68,5 +98,6 @@ Robintest's public API includes:
 [changelog]: http://keepachangelog.com/en/1.0.0/
 [semver]: http://semver.org/spec/v2.0.0.html
 
-[Unreleased]: https://github.com/oar-team/batsim/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/oar-team/batsim/compare/v0.1.0...v0.2.0
+[Unreleased]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.3.0...master
+[0.3.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.2.0...v0.3.0
+[0.2.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.1.0...v0.2.0
