@@ -244,6 +244,8 @@ Verbosity options:
 		err := generateDescription(arguments)
 		if err != nil {
 			return 1
+		} else {
+			return 0
 		}
 	}
 
