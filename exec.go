@@ -358,24 +358,22 @@ func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 	pidsToKill := make(map[string]int)
 	setupGuards(&pidsToKill)
 
-	// Execute the processes
+	// Execute the process
 	start := make(chan CmdFinishedMsg)
 	termination := make(chan CmdFinishedMsg)
 	go ExecuteTimeout("Batsim", exp.Batcmd, exp.OutputDir+"/cmd/batsim.bash",
 		"/dev/null", exp.OutputDir+"/log/batsim.log", "Simulation", cmd,
 		exp.SimulationTimeout, start, termination, previewOnError)
 
-	for {
-		select {
-		case start1 := <-start:
-			if start1.State == SUCCESS {
-				pidsToKill["Batsim"] = cmd.Process.Pid
-			}
-		case finish1 := <-termination:
-			delete(pidsToKill, "Batsim")
-			return finish1.State
-		}
+	start1 := <-start
+	if start1.State == SUCCESS {
+		pidsToKill["Batsim"] = cmd.Process.Pid
 	}
+
+	finish1 := <-termination
+	delete(pidsToKill, "Batsim")
+	return finish1.State
+
 }
 
 func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
