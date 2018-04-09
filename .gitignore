@@ -1,3 +1,4 @@
 *.covout
 coverage-report.txt
 *-cover.bats
+bin/
