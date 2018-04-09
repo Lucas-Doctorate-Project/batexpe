@@ -33,7 +33,7 @@ setup() {
 
 # Context expectation
 @test "robintest-efail-context-clean-timeout-schedinuse" {
-    batsched 1>/dev/null 2>/dev/null 3>- &
+    batsched 1>/dev/null 2>/dev/null 3>/dev/null &
     run robintest batsched_ok.yaml --test-timeout=10 --expect-ctx-clean
     [ "$status" -ne 0 ]
     [[ "${lines[0]}" =~ "Unexpected context cleanliness during robin's execution" ]]
@@ -41,7 +41,7 @@ setup() {
 }
 
 @test "robintest-efail-context-clean-timeout-batsiminuse" {
-    batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsched_ok/out 1>/dev/null 2>/dev/null 3>- &
+    batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsched_ok/out 1>/dev/null 2>/dev/null 3>/dev/null &
     run robintest batsched_ok.yaml --test-timeout=10 --expect-ctx-clean
     [ "$status" -ne 0 ]
     [[ "${lines[0]}" =~ "Unexpected context cleanliness during robin's execution" ]]
