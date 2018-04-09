@@ -340,6 +340,7 @@ func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 		}).Fatal("Cannot create file")
 	}
 	cmd := exec.Command("bash")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmd.Args = []string{cmd.Args[0], "-eux",
 		exp.OutputDir + "/cmd/batsim.bash"}
 

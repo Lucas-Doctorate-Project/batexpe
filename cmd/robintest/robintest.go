@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 const (
@@ -357,6 +358,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 func RunCheckScript(resultCheckScript, robinOutputDir, batsimExportPrefix string,
 	checkTimeout float64) (bool, error) {
 	cmd := exec.Command(resultCheckScript)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmd.Args = []string{cmd.Args[0], batsimExportPrefix}
 
 	checkout, err := os.Create(robinOutputDir + "/log/check.out.log")
