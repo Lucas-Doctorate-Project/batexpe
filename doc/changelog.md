@@ -18,6 +18,11 @@ Robintest's public API includes:
 
 [//]: ==========================================================================
 ## [Unreleased]
+### Fixed
+- Setgpid was not set on some user-given commands (batsim command when batsim
+  was launched without scheduler, and the check script).
+  This resulted in Kill not working as expected (only the subprocess was
+  killed, not the subprocess and all its children).
 
 [//]: ==========================================================================
 ## [0.3.0] - 2018-04-08
