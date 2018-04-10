@@ -105,7 +105,7 @@ func PreviewFile(filename string, maxLines int64) (preview string, err error) {
 	return strconv.Itoa(int(nbLines)), nil
 }
 
-func IsBatsimOrBatschedRunning() bool {
+func IsBatsimOrBatschedRunning() (bool, error) {
 	// This function directly searches for batsim or batsched processes.
 	rBatsim := regexp.MustCompile(`(?m)^\S*\bbatsim .*$`)
 	rBatsched := regexp.MustCompile(`(?m)^\S*\bbatsched.*$`)
@@ -118,10 +118,11 @@ func IsBatsimOrBatschedRunning() bool {
 		log.WithFields(log.Fields{
 			"err":     err,
 			"command": psCmd,
-		}).Fatal("Cannot list running processes via ps")
+		}).Error("Cannot list running processes via ps")
+		return false, err
 	}
 
 	batsimMatches := rBatsim.FindAllString(string(outBuf), -1)
 	batschedMatches := rBatsched.FindAllString(string(outBuf), -1)
-	return len(batsimMatches) > 0 || len(batschedMatches) > 0
+	return len(batsimMatches) > 0 || len(batschedMatches) > 0, nil
 }

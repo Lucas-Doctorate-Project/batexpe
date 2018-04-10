@@ -131,7 +131,10 @@ func generateDescription(arguments map[string]interface{}) error {
 		return err
 	}
 
-	yam := batexpe.ToYaml(exp)
+	yam, err := batexpe.ToYaml(exp)
+	if err != nil {
+		return err
+	}
 
 	fil := arguments["<description-file>"].(string)
 
@@ -272,7 +275,10 @@ Verbosity options:
 			return 1
 		}
 
-		exp = batexpe.FromYaml(string(byt))
+		exp, err = batexpe.FromYaml(string(byt))
+		if err != nil {
+			return 1
+		}
 	} else {
 		var err error
 		exp, err = ExperimentFromArgs(arguments)

@@ -183,9 +183,16 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 	// Computing whether the context is clean or not is done by checking whether
 	// any batsim or batsched is running. This is intentionally done with a
 	// different function (and technique) that the one done within robin.
-	ctxCleanAtBegin := batexpe.IsBatsimOrBatschedRunning() == false
+
+	batRunningAtBegin, err1 := batexpe.IsBatsimOrBatschedRunning()
+	ctxCleanAtBegin := batRunningAtBegin == false
+
 	rresult := batexpe.RunRobin(descriptionFile, coverFile, testTimeout)
-	ctxCleanAtEnd := batexpe.IsBatsimOrBatschedRunning() == false
+
+	batRunningAtEnd, err2 := batexpe.IsBatsimOrBatschedRunning()
+	ctxCleanAtEnd := batRunningAtEnd == false
+
+	robintestReturnValue := 0
 
 	jsonLines, err := batexpe.ParseRobinOutput(rresult.Output)
 	if err != nil {
@@ -195,7 +202,9 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 		return 1
 	}
 
-	robintestReturnValue := 0
+	if (err1 != nil) || (err2 != nil) {
+		robintestReturnValue = 1
+	}
 
 	// Robin result
 	if robinExpectation != EXPECT_NOTHING {
@@ -341,7 +350,11 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				return 1
 			}
 
-			exp := batexpe.FromYaml(string(byt))
+			exp, err := batexpe.FromYaml(string(byt))
+			if err != nil {
+				return 1
+			}
+
 			batargs, err := batexpe.ParseBatsimCommand(exp.Batcmd)
 			if err != nil {
 				log.WithFields(log.Fields{
