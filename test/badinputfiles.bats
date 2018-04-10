@@ -49,3 +49,10 @@ teardown() {
                   --expect-robin-failure ${RT_CLEAN_CTX}
     good_return_or_print
 }
+
+@test "badinputfiles-huge-port" {
+    run robintest invalid-desc-files/huge_port.yaml \
+                  --test-timeout 30 \
+                  --expect-robin-failure ${RT_CLEAN_CTX}
+    good_return_or_print
+}
