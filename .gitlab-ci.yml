@@ -56,7 +56,7 @@ build:
 test:
   stage: test
   script:
-    - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
+    - cd ${CI_PROJECT_DIR_GOPATH}/test
     - make test
   dependencies:
     - build
@@ -68,7 +68,7 @@ test:
 coverage:
   stage: coverage
   script:
-    - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
+    - cd ${CI_PROJECT_DIR_GOPATH}/test
     - make cover
     - cat coverage-report.txt
     - cp merged.covout coverage-report.txt ${CI_PROJECT_DIR}/
