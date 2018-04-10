@@ -42,7 +42,7 @@ build:
     # Build the project binaries
     - make build
     # Move built binaries into the artifacts directory
-    - mv ./robin ./robintest ./robin.cover ./robintest.cover ${CI_PROJECT_DIR}/artifacts/
+    - mv ./bin/* ${CI_PROJECT_DIR}/artifacts/
   artifacts:
     paths:
       - ${CI_PROJECT_DIR}/artifacts/robin
