@@ -9,7 +9,7 @@ check_corresponding_output_directory:
 clean:
 	rm -f *.covout *-cover.bats ./robin ./robin.cover
 
-cover:
+cover: clean
 	./cover.bash
 
 test: clean
