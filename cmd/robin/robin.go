@@ -218,9 +218,9 @@ Verbosity options:
   --json-logs                   Print information in JSON.
   --preview-on-error            Preview stdout and stderr of failed processes.`
 
-	robinVersion := batexpe.Version()
-	if version != "" {
-		robinVersion = version
+	robinVersion := version
+	if robinVersion == "" {
+		robinVersion = batexpe.Version()
 	}
 
 	ret := -1

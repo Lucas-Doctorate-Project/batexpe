@@ -66,9 +66,9 @@ Usage:
   robintest -h | --help
   robintest --version`
 
-	robintestVersion := batexpe.Version()
-	if version != "" {
-		robintestVersion = version
+	robintestVersion := version
+	if robintestVersion == "" {
+		robintestVersion = batexpe.Version()
 	}
 
 	ret := -1
