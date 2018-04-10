@@ -19,20 +19,16 @@ type Experiment struct {
 
 func readStringFromDict(data map[string]interface{}, key string, yam string) (strRead string, err error) {
 	if val, ok := data[key]; ok {
-		if val == nil {
-			strRead = ""
-		} else {
-			switch val.(type) {
-			case string:
-				strRead = val.(string)
-			default:
-				log.WithFields(log.Fields{
-					"yaml": yam,
-					"key":  key,
-					"map":  data,
-				}).Error("Invalid yaml: field is not a string")
-				return "", fmt.Errorf("Invalid yaml: field is not a string")
-			}
+		switch val.(type) {
+		case string:
+			strRead = val.(string)
+		default:
+			log.WithFields(log.Fields{
+				"yaml": yam,
+				"key":  key,
+				"map":  data,
+			}).Error("Invalid yaml: field is not a string")
+			return "", fmt.Errorf("Invalid yaml: field is not a string")
 		}
 	} else {
 		log.WithFields(log.Fields{
