@@ -16,7 +16,7 @@
 @test "cli-robintest-version" {
     run robintest --version
     [ "$status" -eq 0 ]
-    [ $(echo "${lines[0]}" | grep -o -E '^[0-9]+\.[0-9]+\.[0-9]+$') == "${lines[0]}" ]
+    [ $(echo "${lines[0]}" | grep -o -E 'v[0-9]+\.[0-9]+\.[0-9]+.*') == "${lines[0]}" ]
 }
 
 @test "cli-robintest-nonexistent-desc-file" {
