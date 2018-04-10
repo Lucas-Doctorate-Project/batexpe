@@ -49,10 +49,16 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 		"timeout": timeout,
 	}).Debug("Starting robin")
 
+	var rresult RobinResult
+
 	if err := cmd.Start(); err != nil {
 		log.WithFields(log.Fields{
 			"command": cmd,
-		}).Fatal("Could not start robin")
+		}).Error("Could not start robin")
+		rresult.Finished = false
+		rresult.Succeeded = false
+		onexit <- rresult
+		return
 	}
 
 	robinPid := cmd.Process.Pid
@@ -60,8 +66,6 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 	go func() {
 		done <- cmd.Wait()
 	}()
-
-	var rresult RobinResult
 
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
@@ -94,7 +98,10 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 			if err != nil {
 				log.WithFields(log.Fields{
 					"err": err,
-				}).Fatal("Cannot retrieve return code from robin.cover output")
+				}).Error("Cannot retrieve return code from robin.cover output")
+				rresult.Succeeded = false
+				onexit <- rresult
+				return
 			}
 
 			log.WithFields(log.Fields{

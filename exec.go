@@ -95,10 +95,18 @@ func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) error {
 				"conflicting batsim running": anotherBatsim,
 			}).Error("Context remains invalid")
 			return fmt.Errorf("Context remanis invalid")
-		case <-sockChan:
-			socketInUse = false
-		case <-batChan:
-			anotherBatsim = false
+		case code := <-sockChan:
+			if code == 0 {
+				socketInUse = false
+			} else {
+				return fmt.Errorf("Could not determine whether the network port is in use")
+			}
+		case code := <-batChan:
+			if code == 0 {
+				anotherBatsim = false
+			} else {
+				return fmt.Errorf("Could not determine whether other Batsim instances are running")
+			}
 		}
 	}
 
@@ -117,7 +125,9 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 			log.WithFields(log.Fields{
 				"err":     err,
 				"command": psCmd,
-			}).Fatal("Cannot list running processes via ps")
+			}).Error("Cannot list running processes via ps")
+			onexit <- 1
+			return
 		}
 
 		conflict := false
@@ -132,7 +142,9 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 				log.WithFields(log.Fields{
 					"command": batcmd,
 					"err":     err,
-				}).Fatal("Cannot retrieve information from a running Batsim process command")
+				}).Error("Cannot retrieve information from a running Batsim process command")
+				onexit <- 1
+				return
 			}
 
 			lineport, err := PortFromBatSock(batargs.Socket)
@@ -141,7 +153,9 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 					"err": err,
 					"extracted socket endpoint": batargs.Socket,
 					"batsim command":            batcmd,
-				}).Fatal("Cannot retrieve port from a running Batsim process command")
+				}).Error("Cannot retrieve port from a running Batsim process command")
+				onexit <- 1
+				return
 			}
 
 			if lineport == port {
@@ -150,7 +164,7 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 		}
 
 		if !conflict {
-			onexit <- 1
+			onexit <- 0
 			return
 		} else {
 			time.Sleep(100 * time.Millisecond)
@@ -171,11 +185,13 @@ func waitTcpPortAvailableSs(port uint16, onexit chan int) {
 			log.WithFields(log.Fields{
 				"err":     err,
 				"command": ssCmd,
-			}).Fatal("Cannot list open sockets via ss")
+			}).Error("Cannot list open sockets via ss")
+			onexit <- 1
+			return
 		}
 
 		if !(r.Match(outBuf)) {
-			onexit <- 1
+			onexit <- 0
 			return
 		} else {
 			time.Sleep(100 * time.Millisecond)
