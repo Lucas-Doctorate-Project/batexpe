@@ -57,29 +57,7 @@ cli:
   stage: test
   script:
     - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
-    - bats robin_cli.bats
-  dependencies:
-    - build
-
-nosched:
-  stage: test
-  script:
-    - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
-    - bats nosched.bats
-  dependencies:
-    - build
-
-batsched:
-  stage: test
-  script:
-    - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
-    - bats batsched_*.bats
-
-robintest:
-  stage: test
-  script:
-    - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
-    - bats robintest*.bats
+    - make test
   dependencies:
     - build
 
@@ -91,7 +69,7 @@ coverage:
   stage: coverage
   script:
     - cd ${CI_PROJECT_DIR_GOPATH}/test/robin
-    - ./cover.bash
+    - make cover
     - cat coverage-report.txt
     - cp merged.covout coverage-report.txt ${CI_PROJECT_DIR}/
   artifacts:
