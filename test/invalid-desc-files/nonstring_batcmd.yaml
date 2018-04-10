@@ -1,0 +1,7 @@
+batcmd: {"this": "is a dictionary, not a string."}
+output-dir: /tmp/robin/nonfloat_timeout
+schedcmd: ""
+simulation-timeout: 30
+ready-timeout: 5
+success-timeout: 5
+failure-timeout: 0

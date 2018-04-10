@@ -56,3 +56,17 @@ teardown() {
                   --expect-robin-failure ${RT_CLEAN_CTX}
     good_return_or_print
 }
+
+@test "badinputfiles-nonfloat-timeout" {
+    run robintest invalid-desc-files/nonfloat_timeout.yaml \
+                  --test-timeout 30 \
+                  --expect-robin-failure ${RT_CLEAN_CTX}
+    good_return_or_print
+}
+
+@test "badinputfiles-nonstring-batcmd" {
+    run robintest invalid-desc-files/nonstring_batcmd.yaml \
+                  --test-timeout 30 \
+                  --expect-robin-failure ${RT_CLEAN_CTX}
+    good_return_or_print
+}
