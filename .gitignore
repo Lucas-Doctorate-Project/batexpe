@@ -4,3 +4,5 @@ coverage-report.txt
 bin/
 test/robin/robin
 test/robin/robin.cover
+test/robin/ps
+test/robin/ss

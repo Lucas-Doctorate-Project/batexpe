@@ -1,5 +1,5 @@
 teardown() {
-    rm -f ./robin ./robin.cover
+    rm -f ./robin ./robin.cover ./ss ./ps
     export PATH="${OLDPATH}"
 }
 
@@ -41,5 +41,12 @@ setup() {
     run robintest ./invalid-desc-files/unreachable-outdir.yaml \
                   --test-timeout 10 \
                   --result-check-script=./commands/success
+    [ "$status" -ne 0 ]
+}
+
+@test "mock-ps-failure" {
+    ln -f -s $(realpath ./commands/failure) ./ps
+
+    run robintest batsched_ok.yaml --test-timeout 10
     [ "$status" -ne 0 ]
 }
