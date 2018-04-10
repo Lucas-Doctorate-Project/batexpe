@@ -101,8 +101,6 @@ func PreviewFile(filename string, maxLines int64) (preview string, err error) {
 			"... (truncated... whole log in '%s')\n...\n...\n%s",
 			string(headOut), filename, string(tailOut)), nil
 	}
-
-	return strconv.Itoa(int(nbLines)), nil
 }
 
 func IsBatsimOrBatschedRunning() (bool, error) {
