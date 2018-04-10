@@ -84,3 +84,10 @@ teardown() {
                   --expect-robin-failure ${RT_CLEAN_CTX}
     good_return_or_print
 }
+
+@test "badinputfiles-list" {
+    run robintest invalid-desc-files/list.yaml \
+                  --test-timeout 30 \
+                  --expect-robin-failure ${RT_CLEAN_CTX}
+    good_return_or_print
+}
