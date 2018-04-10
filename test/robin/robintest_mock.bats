@@ -33,3 +33,13 @@ setup() {
                   --result-check-script=./commands/success
     [ "$status" -ne 0 ]
 }
+
+@test "mock-robin-hello-check-descfile-badoutdir" {
+    ln -f -s $(realpath ./commands/hello) ./robin
+    ln -f -s $(realpath ./commands/hello) ./robin.cover
+
+    run robintest ./invalid-desc-files/unreachable-outdir.yaml \
+                  --test-timeout 10 \
+                  --result-check-script=./commands/success
+    [ "$status" -ne 0 ]
+}

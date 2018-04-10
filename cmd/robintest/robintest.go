@@ -385,27 +385,28 @@ func RunCheckScript(resultCheckScript, robinOutputDir, batsimExportPrefix string
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmd.Args = []string{cmd.Args[0], batsimExportPrefix}
 
-	checkout, err := os.Create(robinOutputDir + "/log/check.out.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": robinOutputDir + "/log/check.out.log",
-			"err":      err,
-		}).Error("Cannot create file")
-		return false, err
-	}
-	defer checkout.Close()
-	cmd.Stdout = checkout
+	checkout, outErr := os.Create(robinOutputDir + "/log/check.out.log")
+	checkerr, errErr := os.Create(robinOutputDir + "/log/check.err.log")
 
-	checkerr, err := os.Create(robinOutputDir + "/log/check.err.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": robinOutputDir + "/log/check.err.log",
-			"err":      err,
-		}).Error("Cannot create file")
-		return false, err
+	if outErr == nil {
+		defer checkout.Close()
+		cmd.Stdout = checkout
 	}
-	defer checkerr.Close()
-	cmd.Stderr = checkerr
+
+	if errErr == nil {
+		defer checkerr.Close()
+		cmd.Stderr = checkerr
+	}
+
+	if (outErr != nil) || (errErr != nil) {
+		log.WithFields(log.Fields{
+			"out_filename": robinOutputDir + "/log/check.out.log",
+			"out_err":      outErr,
+			"err_filename": robinOutputDir + "/log/check.err.log",
+			"err_err":      errErr,
+		}).Error("Cannot create file")
+		return false, fmt.Errorf("Cannot create file")
+	}
 
 	start := make(chan batexpe.CmdFinishedMsg)
 	termination := make(chan batexpe.CmdFinishedMsg)
