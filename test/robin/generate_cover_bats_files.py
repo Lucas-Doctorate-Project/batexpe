@@ -24,6 +24,13 @@ def generate_bats_file(input_filename, output_filename):
                         "__bypass--cover={f}.r.{c}.covout".format(
                             f=input_filename, c=repl_count), line)
                     repl_count += 1
+                elif """run PATH=".:${PATH}" robintest""" in line:
+                    line = re.sub("""run PATH=".:\${PATH}" robintest\\b""",
+                        'run PATH=".:${{PATH}}" robintest.cover '
+                        "-test.coverprofile={f}.rt.{c}.covout "
+                        "__bypass--cover={f}.r.{c}.covout".format(
+                            f=input_filename, c=repl_count), line)
+                    repl_count += 1
                 elif "run robin" in line:
                     line = re.sub("""run robin\\b""",
                         "run robin.cover "
