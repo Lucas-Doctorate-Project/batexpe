@@ -42,3 +42,10 @@ teardown() {
                   --expect-robin-failure ${RT_CLEAN_CTX}
     good_return_or_print
 }
+
+@test "badinputfiles-nonintegral-port" {
+    run robintest invalid-desc-files/nonintegral_port.yaml \
+                  --test-timeout 30 \
+                  --expect-robin-failure ${RT_CLEAN_CTX}
+    good_return_or_print
+}
