@@ -7,3 +7,5 @@ test/robin.cover
 test/ps
 test/ss
 test/wc
+test/head
+test/tail

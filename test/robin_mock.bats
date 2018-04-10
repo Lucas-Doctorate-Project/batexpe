@@ -1,5 +1,5 @@
 teardown() {
-    rm -f ./robin ./robin.cover ./wc
+    rm -f ./robin ./robin.cover ./wc ./head ./tail
     export PATH="${OLDPATH}"
 }
 
@@ -19,5 +19,19 @@ setup() {
     ln -f -s $(realpath ./commands/hello) ./wc
 
     run robin batsim_nosched_badinput.yaml --preview-on-error
+    [ "$status" -ne 0 ]
+}
+
+@test "robin-mock-head-failure-preview" {
+    ln -f -s $(realpath ./commands/failure) ./head
+
+    run robin batsched_schedcrash_end_segfault_long.yaml --preview-on-error
+    [ "$status" -ne 0 ]
+}
+
+@test "robin-mock-tail-failure-preview" {
+    ln -f -s $(realpath ./commands/failure) ./tail
+
+    run robin batsched_schedcrash_end_segfault_long.yaml --preview-on-error
     [ "$status" -ne 0 ]
 }
