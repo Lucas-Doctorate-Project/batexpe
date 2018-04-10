@@ -1,5 +1,4 @@
-batcmd: {"this": "is a dictionary, not a string."}
-output-dir: /tmp/robin/nonstring_batcmd
+output-dir: /tmp/robin/missing_batcmd
 schedcmd: ""
 simulation-timeout: 30
 ready-timeout: 5
