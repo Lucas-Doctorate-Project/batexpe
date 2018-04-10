@@ -69,10 +69,7 @@ func PreviewFile(filename string, maxLines int64) (preview string, err error) {
 	if nbLines <= maxLines {
 		// Retrieve the whole file content
 		content, err := ioutil.ReadFile(filename)
-		if err != nil {
-			return "", fmt.Errorf("Cannot read file")
-		}
-		return string(content), nil
+		return string(content), err
 	} else {
 		// Only retrieve the first and last lines
 		// First lines
