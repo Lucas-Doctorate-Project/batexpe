@@ -58,7 +58,8 @@ ROBINTEST_FILES = ["batsched_fast.bats",
                    "robintest_cli.bats",
                    "robintest_expectedfail.bats",
                    "robintest_expectedfail_timeout.bats",
-                   "robintest_mock.bats"
+                   "robintest_mock.bats",
+                   "badinputfiles.bats"
                   ]
 ROBIN_FILES = ["robin_cli.bats"]
 

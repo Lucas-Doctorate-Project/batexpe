@@ -220,5 +220,5 @@ func WasContextClean(robinJsonLines []interface{}) bool {
 		}
 	}
 
-	return false
+	return true
 }
