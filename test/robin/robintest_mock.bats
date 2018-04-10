@@ -8,10 +8,28 @@ setup() {
     export PATH=".:${PATH}"
 }
 
-@test "robintest-mock-robin-hello" {
+@test "mock-robin-hello" {
     ln -f -s $(realpath ./commands/hello) ./robin
     ln -f -s $(realpath ./commands/hello) ./robin.cover
 
     run robintest batsim_nosched_ok.yaml --test-timeout 10
+    [ "$status" -ne 0 ]
+}
+
+@test "mock-robin-hello-check-badbatcmd" {
+    ln -f -s $(realpath ./commands/hello) ./robin
+    ln -f -s $(realpath ./commands/hello) ./robin.cover
+
+    run robintest batsim_nosched_badcmd.yaml --test-timeout 10 \
+                  --result-check-script=./commands/success
+    [ "$status" -ne 0 ]
+}
+
+@test "mock-robin-hello-check-nodescfile" {
+    ln -f -s $(realpath ./commands/hello) ./robin
+    ln -f -s $(realpath ./commands/hello) ./robin.cover
+
+    run robintest /this/file/does/not/exist --test-timeout 10 \
+                  --result-check-script=./commands/success
     [ "$status" -ne 0 ]
 }

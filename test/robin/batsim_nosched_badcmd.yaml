@@ -1,0 +1,7 @@
+batcmd: this is not a batsim command
+output-dir: /tmp/robin/batsim_nosched_badcmd
+schedcmd: ""
+simulation-timeout: 30
+ready-timeout: 5
+success-timeout: 5
+failure-timeout: 0

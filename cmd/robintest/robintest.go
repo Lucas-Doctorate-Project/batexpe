@@ -194,13 +194,7 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 
 	robintestReturnValue := 0
 
-	jsonLines, err := batexpe.ParseRobinOutput(rresult.Output)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("Could not parse robin output")
-		return 1
-	}
+	jsonLines, parseRobinOutputErr := batexpe.ParseRobinOutput(rresult.Output)
 
 	if (err1 != nil) || (err2 != nil) {
 		robintestReturnValue = 1
@@ -347,12 +341,12 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 					"err":      err,
 					"filename": descriptionFile,
 				}).Error("Cannot open description file")
-				return 1
+				robintestReturnValue = 1
 			}
 
 			exp, err := batexpe.FromYaml(string(byt))
 			if err != nil {
-				return 1
+				robintestReturnValue = 1
 			}
 
 			batargs, err := batexpe.ParseBatsimCommand(exp.Batcmd)
@@ -360,19 +354,26 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 				log.WithFields(log.Fields{
 					"err": err,
 				}).Error("Cannot parse Batsim command")
-				return 1
+				robintestReturnValue = 1
 			}
 
 			checkScriptSuccessful, err := RunCheckScript(resultCheckScript,
 				exp.OutputDir, batargs.ExportPrefix, testTimeout)
 			if err != nil {
-				return 1
+				robintestReturnValue = 1
 			}
 
 			if !checkScriptSuccessful {
 				robintestReturnValue = 1
 			}
 		}
+	}
+
+	if parseRobinOutputErr != nil {
+		log.WithFields(log.Fields{
+			"err": parseRobinOutputErr,
+		}).Error("Could not parse robin output")
+		robintestReturnValue = 1
 	}
 
 	return robintestReturnValue
