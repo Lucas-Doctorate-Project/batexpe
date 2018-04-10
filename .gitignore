@@ -2,3 +2,4 @@
 coverage-report.txt
 *-cover.bats
 bin/
+test/robin/robin

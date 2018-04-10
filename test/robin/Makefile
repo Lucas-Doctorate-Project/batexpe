@@ -7,7 +7,7 @@ check_corresponding_output_directory:
 	sed 'sW\.\(.*\)\.yamlWecho -n ".\1.yaml " \&\& cat .\1.yaml | grep "/tmp/robin\1" | wc -lW' | bash
 
 clean:
-	rm -f *.covout *-cover.bats
+	rm -f *.covout *-cover.bats ./robin
 
 cover:
 	./cover.bash

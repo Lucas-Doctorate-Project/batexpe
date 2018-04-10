@@ -191,7 +191,8 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err": err,
-		}).Fatal("Could not parse robin output")
+		}).Error("Could not parse robin output")
+		return 1
 	}
 
 	robintestReturnValue := 0
