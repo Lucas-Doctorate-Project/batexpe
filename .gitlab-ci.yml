@@ -39,14 +39,10 @@ build:
     - go get .
     # Prepare artifacts
     - mkdir -p ${CI_PROJECT_DIR}/artifacts
-    # Build robin
-    - go build -o ${CI_PROJECT_DIR}/artifacts/robin ./cmd/robin
-    # Build robintest
-    - go build -o ${CI_PROJECT_DIR}/artifacts/robintest ./cmd/robintest
-    # Build robin.cover (robin with coverage)
-    - go test -c -o ${CI_PROJECT_DIR}/artifacts/robin.cover -covermode=count -coverpkg=./,./cmd/robin,./cmd/robintest ./cmd/robin
-    # Build robintest.cover (robintest with coverage)
-    - go test -c -o ${CI_PROJECT_DIR}/artifacts/robintest.cover -covermode=count -coverpkg=./,./cmd/robin,./cmd/robintest ./cmd/robintest
+    # Build the project binaries
+    - make build
+    # Move built binaries into the artifacts directory
+    - mv ./robin ./robintest ./robin.cover ./robintest.cover ${CI_PROJECT_DIR}/artifacts/
   artifacts:
     paths:
       - ${CI_PROJECT_DIR}/artifacts/robin
