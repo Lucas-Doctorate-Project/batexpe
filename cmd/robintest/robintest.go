@@ -13,6 +13,10 @@ import (
 	"syscall"
 )
 
+var (
+	version string
+)
+
 const (
 	EXPECT_NOTHING int = iota
 	EXPECT_TRUE
@@ -62,6 +66,11 @@ Usage:
   robintest -h | --help
   robintest --version`
 
+	robintestVersion := batexpe.Version()
+	if version != "" {
+		robintestVersion = version
+	}
+
 	ret := -1
 
 	parser := &docopt.Parser{
@@ -76,7 +85,7 @@ Usage:
 		OptionsFirst: false,
 	}
 
-	arguments, _ := parser.ParseArgs(usage, os.Args[1:], batexpe.Version())
+	arguments, _ := parser.ParseArgs(usage, os.Args[1:], robintestVersion)
 	if ret != -1 {
 		return ret
 	}

@@ -10,6 +10,10 @@ import (
 	"strconv"
 )
 
+var (
+	version string
+)
+
 func setupLogging(arguments map[string]interface{}) (previewOnError bool) {
 	log.SetOutput(os.Stdout)
 
@@ -214,6 +218,11 @@ Verbosity options:
   --json-logs                   Print information in JSON.
   --preview-on-error            Preview stdout and stderr of failed processes.`
 
+	robinVersion := batexpe.Version()
+	if version != "" {
+		robinVersion = version
+	}
+
 	ret := -1
 
 	parser := &docopt.Parser{
@@ -228,7 +237,7 @@ Verbosity options:
 		OptionsFirst: false,
 	}
 
-	arguments, _ := parser.ParseArgs(usage, os.Args[1:], batexpe.Version())
+	arguments, _ := parser.ParseArgs(usage, os.Args[1:], robinVersion)
 	if ret != -1 {
 		return ret
 	}
