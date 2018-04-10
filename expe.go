@@ -58,8 +58,8 @@ func readFloat64FromDict(data map[string]interface{}, key string, yam string) (f
 				"yaml": yam,
 				"key":  key,
 				"map":  data,
-			}).Error("Invalid yaml: field is not a string")
-			return -1, fmt.Errorf("Invalid yaml: field is not a string")
+			}).Error("Invalid yaml: field is not a float64")
+			return -1, fmt.Errorf("Invalid yaml: field is not a float64")
 		}
 	} else {
 		log.WithFields(log.Fields{
