@@ -77,3 +77,13 @@ teardown() {
     good_return_or_print
 }
 
+@test "batsched-schedcrash-end-segfault-long-preview" {
+    run robin batsched_schedcrash_end_segfault_long.yaml --preview-on-error
+    [ "${status}" -ne 0 ]
+}
+
+@test "batsched-schedcrash-end-segfault-long-preview-quiet" {
+    run robin batsched_schedcrash_end_segfault_long_quiet.yaml --preview-on-error
+    [ "${status}" -ne 0 ]
+}
+

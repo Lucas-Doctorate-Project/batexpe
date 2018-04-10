@@ -61,7 +61,8 @@ ROBINTEST_FILES = ["batsched_fast.bats",
                    "robintest_mock.bats",
                    "badinputfiles.bats"
                   ]
-ROBIN_FILES = ["robin_cli.bats"]
+ROBIN_FILES = ["robin_cli.bats",
+               "robin_mock.bats"]
 
 for robintest_file in ROBINTEST_FILES + ROBIN_FILES:
     generate_bats_file(robintest_file, re.sub(

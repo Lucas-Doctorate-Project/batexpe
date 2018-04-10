@@ -1,5 +1,5 @@
 teardown() {
-    rm -f ./robin ./robin.cover ./ss ./ps
+    rm -f ./robin ./robin.cover ./ps
     export PATH="${OLDPATH}"
 }
 
@@ -8,7 +8,7 @@ setup() {
     export PATH=".:${PATH}"
 }
 
-@test "mock-robin-hello" {
+@test "robintest-mock-robin-hello" {
     ln -f -s $(realpath ./commands/hello) ./robin
     ln -f -s $(realpath ./commands/hello) ./robin.cover
 
@@ -16,7 +16,7 @@ setup() {
     [ "$status" -ne 0 ]
 }
 
-@test "mock-robin-hello-check-badbatcmd" {
+@test "robintest-mock-robin-hello-check-badbatcmd" {
     ln -f -s $(realpath ./commands/hello) ./robin
     ln -f -s $(realpath ./commands/hello) ./robin.cover
 
@@ -25,7 +25,7 @@ setup() {
     [ "$status" -ne 0 ]
 }
 
-@test "mock-robin-hello-check-nodescfile" {
+@test "robintest-mock-robin-hello-check-nodescfile" {
     ln -f -s $(realpath ./commands/hello) ./robin
     ln -f -s $(realpath ./commands/hello) ./robin.cover
 
@@ -34,7 +34,7 @@ setup() {
     [ "$status" -ne 0 ]
 }
 
-@test "mock-robin-hello-check-descfile-badoutdir" {
+@test "robintest-mock-robin-hello-check-descfile-badoutdir" {
     ln -f -s $(realpath ./commands/hello) ./robin
     ln -f -s $(realpath ./commands/hello) ./robin.cover
 
@@ -44,7 +44,7 @@ setup() {
     [ "$status" -ne 0 ]
 }
 
-@test "mock-ps-failure" {
+@test "robintest-mock-ps-failure" {
     ln -f -s $(realpath ./commands/failure) ./ps
 
     run robintest batsched_ok.yaml --test-timeout 10
