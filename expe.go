@@ -112,13 +112,6 @@ func FromYaml(str string) (exp Experiment, convertErr error) {
 
 func ToYaml(exp Experiment) (yam string, err error) {
 	byt, err := yaml.Marshal(exp)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err":  err,
-			"expe": exp,
-		}).Error("Could not convert expe to yaml")
-		return "", fmt.Errorf("Could not convert expe to yaml")
-	}
 
 	yam = string(byt)
 
@@ -127,5 +120,5 @@ func ToYaml(exp Experiment) (yam string, err error) {
 		"expe": exp,
 	}).Debug("expe -> yaml")
 
-	return yam, nil
+	return yam, err
 }
