@@ -49,8 +49,6 @@ func readStringFromDict(data map[string]interface{}, key string, yam string) (st
 func readFloat64FromDict(data map[string]interface{}, key string, yam string) (fltRead float64, err error) {
 	if val, ok := data[key]; ok {
 		switch val.(type) {
-		case int:
-			fltRead = float64(val.(int))
 		case float64:
 			fltRead = val.(float64)
 		default:
