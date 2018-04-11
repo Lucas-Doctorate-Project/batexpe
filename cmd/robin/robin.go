@@ -131,20 +131,17 @@ func generateDescription(arguments map[string]interface{}) error {
 		return err
 	}
 
-	yam, err := batexpe.ToYaml(exp)
-	if err != nil {
-		return err
-	}
-
+	yam, generateYamlErr := batexpe.ToYaml(exp)
 	fil := arguments["<description-file>"].(string)
+	writeFileErr := ioutil.WriteFile(fil, []byte(yam), 0644)
 
-	err = ioutil.WriteFile(fil, []byte(yam), 0644)
-	if err != nil {
+	if (generateYamlErr != nil) || (writeFileErr != nil) {
 		log.WithFields(log.Fields{
-			"err":      err,
-			"filename": fil,
+			"generate yaml err": generateYamlErr,
+			"write file err:":   writeFileErr,
+			"filename":          fil,
 		}).Error("Cannot write file")
-		return fmt.Errorf("Cannot write file")
+		return fmt.Errorf("Cannot generate description file")
 	}
 
 	return nil
