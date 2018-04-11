@@ -61,3 +61,12 @@ setup() {
     run robintest batsched_ok.yaml --test-timeout 10
     [ "$status" -ne 0 ]
 }
+
+@test "robintest-mock-robin-success-expectbatsimfailure" {
+    ln -f -s $(realpath ./commands/success) ./robin
+    ln -f -s $(realpath ./commands/success) ./robin.cover
+
+    run robintest batsim_nosched_ok.yaml --test-timeout 10 \
+                  --expect-batsim-failure
+    [ "$status" -eq 0 ]
+}
