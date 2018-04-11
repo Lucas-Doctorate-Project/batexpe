@@ -335,30 +335,30 @@ func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 	}).Info("Starting simulation")
 
 	// Create command
-	err := ioutil.WriteFile(exp.OutputDir+"/cmd/batsim.bash", []byte(exp.Batcmd), 0755)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "/cmd/batsim.bash",
-			"err":      err,
-		}).Error("Cannot create file")
-		return 1
-	}
 	cmd := exec.Command("bash")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmd.Args = []string{cmd.Args[0], "-eux",
 		exp.OutputDir + "/cmd/batsim.bash"}
 
-	// Log simulation output
-	batlog, err := os.Create(exp.OutputDir + "/log/batsim.log")
-	if err != nil {
+	// Create files
+	createBatsimCmdErr := ioutil.WriteFile(exp.OutputDir+"/cmd/batsim.bash",
+		[]byte(exp.Batcmd), 0755)
+	batlog, createBatsimLogErr := os.Create(exp.OutputDir + "/log/batsim.log")
+
+	if createBatsimLogErr == nil {
+		defer batlog.Close()
+		cmd.Stderr = batlog
+	}
+
+	if (createBatsimCmdErr != nil) || (createBatsimLogErr != nil) {
 		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "log/batsim.log",
-			"err":      err,
+			"batsim cmdfile":     exp.OutputDir + "/cmd/batsim.bash",
+			"batsim cmdfile err": createBatsimCmdErr,
+			"batsim logfile":     exp.OutputDir + "log/batsim.log",
+			"batsim logfile err": createBatsimLogErr,
 		}).Error("Cannot create file")
 		return 1
 	}
-	defer batlog.Close()
-	cmd.Stderr = batlog
 
 	// Guards against SIGINT (ctrl+c) and SIGTERM (polite kill)
 	pidsToKill := make(map[string]int)
@@ -398,65 +398,59 @@ func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
 	cmds := make(map[string]*exec.Cmd)
 	success := make(map[string]int)
 
-	err := ioutil.WriteFile(exp.OutputDir+"/cmd/batsim.bash", []byte(exp.Batcmd), 0755)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "/cmd/batsim.bash",
-			"err":      err,
-		}).Error("Cannot create file")
-		return 1
-	}
 	cmds["Batsim"] = exec.Command("bash")
 	cmds["Batsim"].SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmds["Batsim"].Args = []string{cmds["Batsim"].Args[0], "-eux",
 		exp.OutputDir + "/cmd/batsim.bash"}
 
-	err = ioutil.WriteFile(exp.OutputDir+"/cmd/sched.bash", []byte(exp.Schedcmd), 0755)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "/cmd/sched.bash",
-			"err":      err,
-		}).Error("Cannot create file")
-		return 1
-	}
 	cmds["Scheduler"] = exec.Command("bash")
 	cmds["Scheduler"].SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmds["Scheduler"].Args = []string{cmds["Scheduler"].Args[0], "-eux",
 		exp.OutputDir + "/cmd/sched.bash"}
 
-	// Log simulation output
-	batlog, err := os.Create(exp.OutputDir + "/log/batsim.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "log/batsim.log",
-			"err":      err,
-		}).Error("Cannot create file")
-		return 1
-	}
-	defer batlog.Close()
-	cmds["Batsim"].Stderr = batlog
+	// Create files
+	createBatsimCmdErr := ioutil.WriteFile(exp.OutputDir+"/cmd/batsim.bash",
+		[]byte(exp.Batcmd), 0755)
+	batlog, createBatsimLogErr := os.Create(exp.OutputDir + "/log/batsim.log")
+	createSchedCmdErr := ioutil.WriteFile(exp.OutputDir+"/cmd/sched.bash",
+		[]byte(exp.Schedcmd), 0755)
+	schedout, createSchedLogErr := os.Create(exp.OutputDir +
+		"/log/sched.out.log")
+	schederr, createSchedErrErr := os.Create(exp.OutputDir +
+		"/log/sched.err.log")
 
-	schedout, err := os.Create(exp.OutputDir + "/log/sched.out.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "/log/sched.out.log",
-			"err":      err,
-		}).Error("Cannot create file")
-		return 1
+	if createBatsimLogErr == nil {
+		defer batlog.Close()
+		cmds["Batsim"].Stderr = batlog
 	}
-	defer schedout.Close()
-	cmds["Scheduler"].Stdout = schedout
 
-	schederr, err := os.Create(exp.OutputDir + "/log/sched.err.log")
-	if err != nil {
+	if createSchedLogErr == nil {
+		defer schedout.Close()
+		cmds["Scheduler"].Stdout = schedout
+	}
+
+	if createSchedErrErr == nil {
+		defer schederr.Close()
+		cmds["Scheduler"].Stderr = schederr
+	}
+
+	if (createBatsimCmdErr != nil) || (createSchedCmdErr != nil) ||
+		(createBatsimLogErr != nil) ||
+		(createSchedLogErr != nil) || (createSchedErrErr != nil) {
 		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "/log/sched.err.log",
-			"err":      err,
+			"batsim cmdfile":              exp.OutputDir + "/cmd/batsim.bash",
+			"batsim cmdfile err":          createBatsimCmdErr,
+			"batsim logfile":              exp.OutputDir + "log/batsim.log",
+			"batsim logfile err":          createBatsimLogErr,
+			"scheduler cmdfile":           exp.OutputDir + "/cmd/sched.bash",
+			"scheduler cmdfile err":       createSchedCmdErr,
+			"scheduler logfile (out)":     exp.OutputDir + "/log/sched.out.log",
+			"scheduler logfile (out) err": createSchedLogErr,
+			"scheduler logfile (err)":     exp.OutputDir + "/log/sched.err.log",
+			"scheduler logfile (err) err": createSchedErrErr,
 		}).Error("Cannot create file")
 		return 1
 	}
-	defer schederr.Close()
-	cmds["Scheduler"].Stderr = schederr
 
 	// Guards against SIGINT (ctrl+c) and SIGTERM (polite kill)
 	pidsToKill := make(map[string]int)
