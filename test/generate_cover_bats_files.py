@@ -37,6 +37,12 @@ def generate_bats_file(input_filename, output_filename):
                         "-test.coverprofile={f}.r.{c}.covout".format(
                             f=input_filename, c=repl_count), line)
                     repl_count += 1
+                elif '''"robin" bat''' in line:
+                    line = re.sub('''"robin" bat''',
+                        '"robin.cover" '
+                        "-test.coverprofile={f}.r.{c}.covout bat".format(
+                            f=input_filename, c=repl_count), line)
+                    repl_count += 1
                 elif '[ "$status" -ne 0 ]' in line:
                     line = re.sub("""\[ "\$status" -ne 0 \]""",
                         '[ "$status" -eq 0 ]', line)
@@ -62,7 +68,9 @@ ROBINTEST_FILES = ["batsched_fast.bats",
                    "badinputfiles.bats"
                   ]
 ROBIN_FILES = ["robin_cli.bats",
-               "robin_mock.bats"]
+               "robin_mock.bats",
+               "kill.bats"
+              ]
 
 for robintest_file in ROBINTEST_FILES + ROBIN_FILES:
     generate_bats_file(robintest_file, re.sub(
