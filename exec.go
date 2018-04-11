@@ -27,31 +27,20 @@ type CmdFinishedMsg struct {
 
 func PrepareDirs(exp Experiment) error {
 	// Create output directory if needed
-	err := CreateDirIfNeeded(exp.OutputDir)
-	if err != nil {
+	outErr := CreateDirIfNeeded(exp.OutputDir)
+	logErr := CreateDirIfNeeded(exp.OutputDir + "/log")
+	cmdErr := CreateDirIfNeeded(exp.OutputDir + "/cmd")
+
+	if (outErr != nil) || (logErr != nil) || (cmdErr != nil) {
 		log.WithFields(log.Fields{
-			"directory": exp.OutputDir,
-			"err":       err,
+			"output-dir":     exp.OutputDir,
+			"output-dir_err": outErr,
+			"log-dir":        exp.OutputDir + "/log",
+			"log-dir_err":    logErr,
+			"cmd-dir":        exp.OutputDir + "/cmd",
+			"cmd-dir_err":    cmdErr,
 		}).Error("Cannot create output directory")
-		return err
-	}
-
-	err = CreateDirIfNeeded(exp.OutputDir + "/log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"directory": exp.OutputDir + "/log",
-			"err":       err,
-		}).Error("Cannot create log directory")
-		return err
-	}
-
-	err = CreateDirIfNeeded(exp.OutputDir + "/cmd")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"directory": exp.OutputDir + "/cmd",
-			"err":       err,
-		}).Error("Cannot create command directory")
-		return err
+		return fmt.Errorf("Cannot create output directory")
 	}
 
 	return nil
