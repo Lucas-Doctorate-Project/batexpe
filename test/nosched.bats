@@ -63,6 +63,13 @@ teardown() {
     good_return_or_print
 }
 
+@test "nosched-ok-mismatching-dir" {
+    run robintest batsim_nosched_ok_mismatching_dir.yaml --test-timeout 30 \
+                  --expect-robin-success --expect-batsim-success \
+                  --expect-no-sched ${RT_CLEAN_CTX}
+    good_return_or_print
+}
+
 @test "nosched-ok-long" {
     run robintest batsim_nosched_ok.yaml --test-timeout 30 \
                   --expect-robin-success --expect-batsim-success \

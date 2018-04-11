@@ -1,5 +1,5 @@
-batcmd: batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsim_nosched_ok/out --batexec
-output-dir: /tmp/robin/batsim_nosched_ok
+batcmd: batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsim_nosched_ok_alt/out --batexec
+output-dir: /tmp/robin/batsim_nosched_ok_alt
 schedcmd: "schedcmd-unset"
 simulation-timeout: 30
 ready-timeout: 5
