@@ -89,11 +89,8 @@ teardown() {
 }
 
 @test "batsched-robin-cannot-write-files" {
-    mkdir -p unwritable-dir/cmd
-    mkdir -p unwritable-dir/log
-
-    chmod -w unwritable-dir/cmd
-    chmod -w unwritable-dir/log
+    mkdir -p unwritable-dir/
+    touch unwritable-dir/cmd
 
     run robintest invalid-desc-files/unwritable_batsched.yaml \
                   --test-timeout 30 \
