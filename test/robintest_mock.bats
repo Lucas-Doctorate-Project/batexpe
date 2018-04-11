@@ -16,6 +16,17 @@ setup() {
     [ "$status" -ne 0 ]
 }
 
+@test "robintest-mock-robin-unlaunchable" {
+    echo '#!/this/sha/bang/should/be/invalid' > ./robin
+    chmod +x ./robin
+    echo '#!/this/sha/bang/should/be/invalid' > ./robin.cover
+    chmod +x ./robin.cover
+
+    run robintest batsim_nosched_ok.yaml --test-timeout 10 \
+                  --expect-robin-failure
+    [[ "${lines[0]}" =~ 'Could not start robin' ]]
+}
+
 @test "robintest-mock-robin-hello-check-badbatcmd" {
     ln -f -s $(realpath ./commands/hello) ./robin
     ln -f -s $(realpath ./commands/hello) ./robin.cover
