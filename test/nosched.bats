@@ -61,3 +61,9 @@ teardown() {
                   --expect-no-sched ${RT_CLEAN_CTX}
     good_return_or_print
 }
+
+@test "robintest.cover-nevercover" {
+    ln -f -s $(which robintest.cover) ./myrobintest
+
+    run ./myrobintest -test.coverprofile=nevercover.covout batsim_nosched_ok.yaml --test-timeout 30
+}
