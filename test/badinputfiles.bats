@@ -98,3 +98,17 @@ teardown() {
                   --expect-robin-failure ${RT_CLEAN_CTX}
     good_return_or_print
 }
+
+@test "badinputfiles-nosched-with-sched" {
+    run robintest invalid-desc-files/nosched_with_sched.yaml \
+                  --test-timeout 30 \
+                  --expect-robin-failure ${RT_CLEAN_CTX}
+    good_return_or_print
+}
+
+@test "badinputfiles-batsched-without-sched" {
+    run robintest invalid-desc-files/batsched_without_sched.yaml \
+                  --test-timeout 30 \
+                  --expect-robin-failure ${RT_CLEAN_CTX}
+    good_return_or_print
+}

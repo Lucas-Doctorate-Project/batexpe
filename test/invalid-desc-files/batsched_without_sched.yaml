@@ -1,0 +1,7 @@
+batcmd: batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsched_without_sched/out
+output-dir: /tmp/robin/batsched_without_sched
+schedcmd: ""
+simulation-timeout: 30
+ready-timeout: 5
+success-timeout: 5
+failure-timeout: 0
