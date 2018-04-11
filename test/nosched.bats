@@ -26,6 +26,7 @@ setup() {
 teardown() {
     not_running batsim
     not_running robin
+    rm -rf ./unwritable-dir
 }
 
 @test "nosched-badbash" {
@@ -66,4 +67,17 @@ teardown() {
     ln -f -s $(which robintest.cover) ./myrobintest
 
     run ./myrobintest -test.coverprofile=nevercover.covout batsim_nosched_ok.yaml --test-timeout 30
+}
+
+@test "nosched-robin-cannot-write-files" {
+    mkdir -p unwritable-dir/cmd
+    mkdir -p unwritable-dir/log
+
+    chmod -w unwritable-dir/cmd
+    chmod -w unwritable-dir/log
+
+    run robintest invalid-desc-files/unwritable_nosched.yaml \
+                  --test-timeout 30 \
+                  --expect-robin-failure ${RT_CLEAN_CTX}
+    good_return_or_print
 }

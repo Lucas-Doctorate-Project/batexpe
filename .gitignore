@@ -11,3 +11,4 @@ test/head
 test/tail
 test/myrobintest
 test/fake-batsim
+test/unwritable-dir
