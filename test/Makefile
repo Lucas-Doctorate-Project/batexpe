@@ -8,7 +8,7 @@ check_corresponding_output_directory:
 
 clean:
 	rm -f *.covout *-cover.bats ./robin ./robin.cover ./ps ./wc \
-	      ./head ./tail ./myrobintest
+	      ./head ./tail ./myrobintest ./ss
 
 cover: clean
 	./cover.bash

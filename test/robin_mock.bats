@@ -1,5 +1,5 @@
 teardown() {
-    rm -f ./robin ./robin.cover ./wc ./head ./tail
+    rm -f ./robin ./robin.cover ./wc ./head ./tail ./ss
     export PATH="${OLDPATH}"
 }
 
@@ -33,5 +33,12 @@ setup() {
     ln -f -s $(realpath ./commands/failure) ./tail
 
     run robin batsched_schedcrash_end_segfault_long.yaml --preview-on-error
+    [ "$status" -ne 0 ]
+}
+
+@test "robintest-mock-ss-failure" {
+    ln -f -s $(realpath ./commands/failure) ./ss
+
+    run robin batsched_ok.yaml
     [ "$status" -ne 0 ]
 }

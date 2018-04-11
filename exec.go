@@ -94,7 +94,7 @@ func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) error {
 				"socket in use":              socketInUse,
 				"conflicting batsim running": anotherBatsim,
 			}).Error("Context remains invalid")
-			return fmt.Errorf("Context remanis invalid")
+			return fmt.Errorf("Context remains invalid")
 		case code := <-sockChan:
 			if code == 0 {
 				socketInUse = false
