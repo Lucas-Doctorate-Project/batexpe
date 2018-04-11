@@ -603,8 +603,6 @@ func ExecuteOne(exp Experiment, previewOnError bool) int {
 
 		return executeBatsimAndSched(exp, previewOnError)
 	}
-
-	return -1
 }
 
 func KillProcess(pid int) {
