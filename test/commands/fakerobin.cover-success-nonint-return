@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "Robin return code: 999999999999999999999999999"
+exit 0

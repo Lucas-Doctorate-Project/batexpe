@@ -70,3 +70,11 @@ setup() {
                   --expect-batsim-failure
     [ "$status" -eq 0 ]
 }
+
+@test "robintest-mock-robin.cover-fake-badreturncode" {
+    ln -f -s $(realpath ./commands/fakerobin.cover-success-nonint-return) ./robin.cover
+
+    run robintest batsim_nosched_ok.yaml --test-timeout 10 \
+                  --expect-robin-failure
+    [ "$status" -ne 0 ]
+}

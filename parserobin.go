@@ -145,7 +145,7 @@ func retrieveRobinReturnCodeInRobincoverOutput(output string) (int, error) {
 
 	match := r.FindStringSubmatch(output)
 	if match == nil {
-		return -1, fmt.Errorf("Return line not found")
+		return 1, fmt.Errorf("Return line not found")
 	}
 
 	result := make(map[string]string)
@@ -157,7 +157,7 @@ func retrieveRobinReturnCodeInRobincoverOutput(output string) (int, error) {
 
 	returnCode, err := strconv.ParseInt(result["returnCode"], 10, 32)
 	if err != nil {
-		return -1, fmt.Errorf("Cannot convert return code %v to int",
+		return 1, fmt.Errorf("Cannot convert return code %v to int",
 			result["returnCode"])
 	}
 	return int(returnCode), nil
