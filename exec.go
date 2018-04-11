@@ -311,7 +311,7 @@ func cleanupSubprocesses(pidsToKill map[string]int) {
 	}
 }
 
-func setupGuards(pidsToKill *map[string]int) {
+func setupGuards(pidsToKill *map[string]int, onAbort chan int) {
 	// Guard against ctrl+c
 	// Does not seem needed, as SIGTERM is also launched in this case
 
@@ -322,7 +322,7 @@ func setupGuards(pidsToKill *map[string]int) {
 		<-sigterm
 		log.Warn("SIGTERM received. Killing remaining subprocesses.")
 		cleanupSubprocesses(*pidsToKill)
-		os.Exit(3)
+		onAbort <- 3
 	}()
 }
 
@@ -362,7 +362,8 @@ func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 
 	// Guards against SIGINT (ctrl+c) and SIGTERM (polite kill)
 	pidsToKill := make(map[string]int)
-	setupGuards(&pidsToKill)
+	abort := make(chan int)
+	setupGuards(&pidsToKill, abort)
 
 	// Execute the process
 	start := make(chan CmdFinishedMsg)
@@ -376,10 +377,13 @@ func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 		pidsToKill["Batsim"] = cmd.Process.Pid
 	}
 
-	finish1 := <-termination
-	delete(pidsToKill, "Batsim")
-	return finish1.State
-
+	select {
+	case finish1 := <-termination:
+		delete(pidsToKill, "Batsim")
+		return finish1.State
+	case abortCode := <-abort:
+		return abortCode
+	}
 }
 
 func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
@@ -454,7 +458,8 @@ func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
 
 	// Guards against SIGINT (ctrl+c) and SIGTERM (polite kill)
 	pidsToKill := make(map[string]int)
-	setupGuards(&pidsToKill)
+	abort := make(chan int)
+	setupGuards(&pidsToKill, abort)
 
 	// Execute the processes
 	start := make(chan CmdFinishedMsg)
@@ -540,7 +545,12 @@ func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
 	delete(pidsToKill, finish2.Name)
 	success[finish2.Name] = finish2.State
 
-	return max(success["Batsim"], success["Scheduler"])
+	select {
+	case <-time.After(time.Duration(1) * time.Millisecond):
+		return max(success["Batsim"], success["Scheduler"])
+	case abortCode := <-abort:
+		return abortCode
+	}
 }
 
 // Execute one Batsim simulation
