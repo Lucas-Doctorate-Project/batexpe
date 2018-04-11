@@ -21,7 +21,7 @@ RUN git clone --branch v2.0.0 --depth 1 --single-branch \
 RUN nix-env -i procps iproute2
 
 # Test and CI dependencies
-RUN nix-env -i gnugrep psmisc bats findutils gnused gawk python3 gnumake
+RUN nix-env -i gnugrep psmisc bats findutils gnused gawk python3 gnumake which
 RUN go get github.com/wadey/gocovmerge
 RUN go get github.com/axw/gocov/gocov
 RUN go get github.com/sahilm/yamldiff
