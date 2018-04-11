@@ -18,7 +18,9 @@ nix-env --file ./datamovepkgs --install --attr batexpe
 ```
 
 ## Proposed tools
-- [robin](doc/robin.md) manages the execution of **one** simulation.
+- [robin](doc/robin.md) manages the execution of **one** simulation.  
+  It is meant to be as robust as possible, as it is the core building block
+  to create experiment workflows with Batsim.
 - *robintest* is a *robin* wrapper mainly used to test robin.
   *robintest* notably allows to specify what (robin/batsim/scheduler)
   result is expected.
