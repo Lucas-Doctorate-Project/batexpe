@@ -1,6 +1,6 @@
 teardown() {
     rm -f ./robin ./robin.cover ./ps
-    killall fake-batsim 2>/dev/null
+    killall batsim batsched robin fake-batsim 2>/dev/null
     export PATH="${OLDPATH}"
 }
 
@@ -86,5 +86,5 @@ setup() {
 
     run robintest batsched_ok.yaml --test-timeout 10 \
                   --expect-robin-failure
-    [ "$status" -ne 0 ]
+    [ "$status" -eq 0 ]
 }
