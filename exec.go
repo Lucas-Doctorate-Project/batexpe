@@ -126,22 +126,14 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 				"batcmd": batcmd,
 			}).Debug("Found a running batsim")
 
-			batargs, err := ParseBatsimCommand(batcmd)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"command": batcmd,
-					"err":     err,
-				}).Error("Cannot retrieve information from a running Batsim process command")
-				onexit <- 1
-				return
-			}
+			batargs, parseErr := ParseBatsimCommand(batcmd)
+			lineport, portErr := PortFromBatSock(batargs.Socket)
 
-			lineport, err := PortFromBatSock(batargs.Socket)
-			if err != nil {
+			if (parseErr != nil) || (portErr != nil) {
 				log.WithFields(log.Fields{
-					"err": err,
-					"extracted socket endpoint": batargs.Socket,
-					"batsim command":            batcmd,
+					"parsing_error":        parseErr,
+					"command":              batcmd,
+					"port_retrieval_error": portErr,
 				}).Error("Cannot retrieve port from a running Batsim process command")
 				onexit <- 1
 				return

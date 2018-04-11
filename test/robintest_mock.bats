@@ -1,5 +1,6 @@
 teardown() {
     rm -f ./robin ./robin.cover ./ps
+    killall fake-batsim 2>/dev/null
     export PATH="${OLDPATH}"
 }
 
@@ -75,6 +76,15 @@ setup() {
     ln -f -s $(realpath ./commands/fakerobin.cover-success-nonint-return) ./robin.cover
 
     run robintest batsim_nosched_ok.yaml --test-timeout 10 \
+                  --expect-robin-failure
+    [ "$status" -ne 0 ]
+}
+
+@test "robintest-mock-batsim-batsched-background" {
+    cp -f $(realpath $(which batsched)) ./fake-batsim
+    ./fake-batsim 3>/dev/null &
+
+    run robintest batsched_ok.yaml --test-timeout 10 \
                   --expect-robin-failure
     [ "$status" -ne 0 ]
 }
