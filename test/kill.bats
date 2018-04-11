@@ -176,6 +176,14 @@ teardown() {
     sleep ${kill_wait_time}
 }
 
+@test "kill-sigint-batsched-5.00" {
+    "robin" batsched_schedcrash_end_loop.yaml 3>/dev/null &
+    robin_pid=$!
+    sleep 5.00
+    kill -INT ${robin_pid}
+    sleep 2.00
+}
+
 #####################
 # Batsched, SIGTERM #
 #####################
