@@ -1,5 +1,5 @@
 batcmd: batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsim_nosched_ok/out --batexec
-output-dir: dir-without-write-permissions/unwritable-dir
+output-dir: dir-without-write-permissions/non-creatable-dir
 schedcmd: ""
 simulation-timeout: 30
 ready-timeout: 5
