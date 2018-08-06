@@ -1,14 +1,14 @@
-[![pipeline status](https://gitlab.inria.fr/batsim/batexpe/badges/master/pipeline.svg)](https://gitlab.inria.fr/batsim/batexpe/commits/master)
-[![coverage report](https://gitlab.inria.fr/batsim/batexpe/badges/master/coverage.svg)](https://gitlab.inria.fr/batsim/batexpe/commits/master)
+[![pipeline status](https://framagit.org/batsim/batexpe/badges/master/pipeline.svg)](https://framagit.org/batsim/batexpe/commits/master)
+[![coverage report](https://framagit.org/batsim/batexpe/badges/master/coverage.svg)](https://framagit.org/batsim/batexpe/commits/master)
 
 This repository contains a set of Go tools around
-[Batsim](https://gitlab.inria.fr/batsim/batsim) to simplify experiments.
+[Batsim](https://framagit.org/batsim/batsim) to simplify experiments.
 
 ## Install
 ### Via the go tool
 ```bash
-go get gitlab.inria.fr/batsim/batexpe/cmd/robin
-go get gitlab.inria.fr/batsim/batexpe/cmd/robintest
+go get framagit.org/batsim/batexpe/cmd/robin
+go get framagit.org/batsim/batexpe/cmd/robintest
 ```
 
 ### Via nix

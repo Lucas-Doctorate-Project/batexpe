@@ -136,7 +136,7 @@ Robintest's public API includes:
 [changelog]: http://keepachangelog.com/en/1.0.0/
 [semver]: http://semver.org/spec/v2.0.0.html
 
-[Unreleased]: https://gitlab.inria.fr/batsim/batexpe/compare/v1.0.0...master
-[1.0.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.3.0...v1.0.0
-[0.3.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.2.0...v0.3.0
-[0.2.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.1.0...v0.2.0
+[Unreleased]: https://framagit.org/batsim/batexpe/compare/v1.0.0...master
+[1.0.0]: https://framagit.org/batsim/batexpe/compare/v0.3.0...v1.0.0
+[0.3.0]: https://framagit.org/batsim/batexpe/compare/v0.2.0...v0.3.0
+[0.2.0]: https://framagit.org/batsim/batexpe/compare/v0.1.0...v0.2.0
