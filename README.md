@@ -1,5 +1,5 @@
-[![pipeline status](https://framagit.org/batsim/batexpe/badges/master/pipeline.svg)](https://framagit.org/batsim/batexpe/commits/master)
-[![coverage report](https://framagit.org/batsim/batexpe/badges/master/coverage.svg)](https://framagit.org/batsim/batexpe/commits/master)
+[![pipeline status](https://framagit.org/batsim/batexpe/badges/master/pipeline.svg)](https://framagit.org/batsim/batexpe/pipelines)
+[![coverage report](https://framagit.org/batsim/batexpe/badges/master/coverage.svg)](https://framagit.org/batsim/batexpe/-/jobs)
 
 This repository contains a set of Go tools around
 [Batsim](https://framagit.org/batsim/batsim) to simplify experiments.
