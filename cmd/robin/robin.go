@@ -162,9 +162,9 @@ Usage:
         [--ready-timeout=<time>]
         [--success-timeout=<time>]
         [--failure-timeout=<time>]
-        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
+        [(--verbose | --quiet | --debug)] [--json-logs] [--preview-on-error]
   robin <description-file>
-        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
+        [(--verbose | --quiet | --debug)] [--json-logs] [--preview-on-error]
   robin generate <description-file>
         [--output-dir=<dir>]
         [--batcmd=<batsim-command>]
@@ -173,7 +173,7 @@ Usage:
         [--ready-timeout=<time>]
         [--success-timeout=<time>]
         [--failure-timeout=<time>]
-        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
+        [(--verbose | --quiet | --debug)] [--json-logs] [--preview-on-error]
   robin -h | --help
   robin --version
 
