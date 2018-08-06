@@ -24,5 +24,6 @@ nix-env --file ./datamovepkgs --install --attr batexpe
 - *robintest* is a *robin* wrapper mainly used to test robin.
   *robintest* notably allows to specify what (robin/batsim/scheduler)
   result is expected.
-- the multiple commands are just wrapperss around the *batexpe* Go library.  
+- the multiple commands are just wrappers around the *batexpe* library
+  (written in Go).  
   This allows users to build their own tools (in Go) with decent code reuse.
