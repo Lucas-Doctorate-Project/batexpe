@@ -194,7 +194,7 @@ func logExecuteTimeoutError(errMsg string, err error,
 		"simulation timeout (seconds)": timeout,
 	}).Error(errMsg)
 
-	// If the option is set, preview simulation logs to stdout
+	// If the option is set, preview simulation logs to stderr
 	if previewOnError {
 		var linesToPreview int64 = 20
 		// Preview stdout log unless set to /dev/null (batsim process)
@@ -202,12 +202,18 @@ func logExecuteTimeoutError(errMsg string, err error,
 			outPreview, err := PreviewFile(stdoutFile, linesToPreview)
 			if err == nil {
 				if outPreview != "" {
-					fmt.Printf("\nContent of %s's stdout log:\n%s\n",
+					fmt.Fprintf(os.Stderr,
+						"\nContent of %s's stdout log:\n%s\n",
 						name, outPreview)
 				}
 			} else {
-				fmt.Printf("Cannot read %s's stdout log (err=%s)",
-					name, err.Error())
+				log.WithFields(log.Fields{
+					"process name": name,
+					"err":          err,
+					"command":      cmdString,
+					"command file": cmdFile,
+					"stdout file":  stdoutFile,
+				}).Error("Cannot read stdout file")
 			}
 		}
 
@@ -215,12 +221,17 @@ func logExecuteTimeoutError(errMsg string, err error,
 		errPreview, err := PreviewFile(stderrFile, linesToPreview)
 		if err == nil {
 			if errPreview != "" {
-				fmt.Printf("\nContent of %s's stderr log:\n%s\n",
+				fmt.Fprintf(os.Stderr, "\nContent of %s's stderr log:\n%s\n",
 					name, errPreview)
 			}
 		} else {
-			fmt.Printf("Cannot read %s's stderr log (err=%s)",
-				name, err.Error())
+			log.WithFields(log.Fields{
+				"process name": name,
+				"err":          err,
+				"command":      cmdString,
+				"command file": cmdFile,
+				"stderr file":  stderrFile,
+			}).Error("Cannot read stderr file")
 		}
 	}
 }
