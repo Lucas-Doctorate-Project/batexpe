@@ -46,6 +46,11 @@
     [ "$status" -ne 0 ]
 }
 
+@test "cli-robin-badbash-nopreview" {
+    run robin batsim_nosched_badbash.yaml --no-preview-on-error
+    [ "$status" -ne 0 ]
+}
+
 # generate subcommand test
 @test "cli-robin-generate-ok-nosched" {
     run robin generate /tmp/robin_generated.yaml \
