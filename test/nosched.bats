@@ -93,12 +93,3 @@ teardown() {
                   --expect-robin-failure ${RT_CLEAN_CTX}
     good_return_or_print
 }
-
-@test "nosched-robin-cannot-create-output-dir" {
-    chmod -x . # prevents the creation of ./unwritable-dir
-
-    run robintest invalid-desc-files/unwritable_nosched.yaml \
-                  --test-timeout 30 \
-                  --expect-robin-failure ${RT_CLEAN_CTX}
-    good_return_or_print
-}

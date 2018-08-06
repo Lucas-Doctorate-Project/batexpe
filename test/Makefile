@@ -9,7 +9,7 @@ check_corresponding_output_directory:
 clean:
 	rm -f *.covout *-cover.bats ./robin ./robin.cover ./ps ./wc \
 	      ./head ./tail ./myrobintest ./ss ./fake-batsim
-	rm -rf ./unwritable-dir
+	rm -rf ./unwritable-dir ./dir-without-write-permissions
 
 cover: clean
 	./cover.bash
