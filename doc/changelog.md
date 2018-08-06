@@ -18,6 +18,20 @@ Robintest's public API includes:
 
 [//]: ==========================================================================
 ## [Unreleased]
+### Added
+- New `--no-preview-on-error` option,
+  that disables the preview of the logs of failed processes.
+
+### Changed
+- Improved the preview of the logs of failed processes:
+  - This is now written on stderr (was on stdout).
+  - This is now compatible with the `--json-logs` option, as stdout can keep
+    its JSON structure regardless of stderr previews.
+  - This is now enabled by default
+    (use `--no-preview-on-error` to keep old behaviour).
+
+### Deprecated
+- The `--preview-on-error` option is now deprecated.
 
 [//]: ==========================================================================
 ## [1.0.0] - 2018-04-12
