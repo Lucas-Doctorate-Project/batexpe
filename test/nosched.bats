@@ -20,6 +20,7 @@ good_return_or_print() {
 setup() {
     export RT_CLEAN_CTX="--expect-ctx-clean --expect-ctx-clean-at-begin --expect-ctx-clean-at-end"
     killall batsim robin robin.cover 2>/dev/null || true
+    chmod +x $(realpath .)
 }
 
 # teardown is called after each test
@@ -94,7 +95,7 @@ teardown() {
 }
 
 @test "nosched-robin-cannot-create-output-dir" {
-    touch unwritable-dir
+    chmod -x . # prevents the creation of ./unwritable-dir
 
     run robintest invalid-desc-files/unwritable_nosched.yaml \
                   --test-timeout 30 \
