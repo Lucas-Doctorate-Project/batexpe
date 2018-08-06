@@ -5,7 +5,7 @@ image: oarteam/robin_ci
 ###############################################################################
 variables:
   GIT_SUBMODULE_STRATEGY: none # TODO: set to normal (for vendoring)
-  REPO_NAME: gitlab.inria.fr/batsim/batexpe
+  REPO_NAME: framagit.org/batsim/batexpe
   GO_PATH: /root/go
   BATSIM_DIR: /batsim
 
