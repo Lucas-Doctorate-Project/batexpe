@@ -11,13 +11,14 @@ import (
 )
 
 func CreateDirIfNeeded(dir string) error {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
+	var err error
+	if _, err = os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
 			return fmt.Errorf("Cannot create directory (err=%s)", err.Error())
 		}
 	}
-	return nil
+	return err
 }
 
 func max(x, y int) (maxVal int) {

@@ -27,10 +27,24 @@ teardown() {
     not_running batsim
     not_running robin
     not_running batsched
+    chattr -i dir-without-write-permissions || true
+    rm -rf ./dir-without-write-permissions
 }
 
 @test "badinputfiles-unreachable-outdir" {
     run robintest invalid-desc-files/unreachable_outdir.yaml \
+                  --test-timeout 30 \
+                  --expect-robin-failure ${RT_CLEAN_CTX}
+    good_return_or_print
+}
+
+@test "badinputfiles-unwritable-outdir" {
+    mkdir dir-without-write-permissions
+    chmod -w dir-without-write-permissions
+    # also prevent root from writing
+    chattr +i dir-without-write-permissions || true
+
+    run robintest invalid-desc-files/unwritable_outdir.yaml \
                   --test-timeout 30 \
                   --expect-robin-failure ${RT_CLEAN_CTX}
     good_return_or_print

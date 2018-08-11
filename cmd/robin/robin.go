@@ -4,7 +4,7 @@ import (
 	"fmt"
 	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
-	"gitlab.inria.fr/batsim/batexpe"
+	"framagit.org/batsim/batexpe"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -35,9 +35,9 @@ func setupLogging(arguments map[string]interface{}) (previewOnError bool) {
 		log.SetLevel(log.InfoLevel)
 	}
 
-	previewOnError = false
-	if arguments["--preview-on-error"] == true {
-		previewOnError = true
+	previewOnError = true
+	if arguments["--no-preview-on-error"] == true {
+		previewOnError = false
 	}
 
 	return previewOnError
@@ -162,9 +162,11 @@ Usage:
         [--ready-timeout=<time>]
         [--success-timeout=<time>]
         [--failure-timeout=<time>]
-        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
+        [(--verbose | --quiet | --debug)] [--json-logs]
+        [(--no-preview-on-error | --preview-on-error)]
   robin <description-file>
-        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
+        [(--verbose | --quiet | --debug)] [--json-logs]
+        [(--no-preview-on-error | --preview-on-error)]
   robin generate <description-file>
         [--output-dir=<dir>]
         [--batcmd=<batsim-command>]
@@ -173,7 +175,7 @@ Usage:
         [--ready-timeout=<time>]
         [--success-timeout=<time>]
         [--failure-timeout=<time>]
-        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
+        [(--verbose | --quiet | --debug)] [--json-logs]
   robin -h | --help
   robin --version
 
@@ -216,7 +218,8 @@ Verbosity options:
   --verbose                     Print information. Default verbosity mode.
   --debug                       Print debug information.
   --json-logs                   Print information in JSON.
-  --preview-on-error            Preview stdout and stderr of failed processes.`
+  --preview-on-error            Preview run logs of failed processes. Default.
+  --no-preview-on-error         Do not preview run logs of failed processes.`
 
 	robinVersion := version
 	if robinVersion == "" {
@@ -247,6 +250,12 @@ Verbosity options:
 	log.WithFields(log.Fields{
 		"args": arguments,
 	}).Debug("Arguments parsed")
+
+	if arguments["--preview-on-error"] == true {
+		log.WithFields(log.Fields{
+			"option": "--preview-on-error",
+		}).Warning("Use of deprecated option")
+	}
 
 	// Generate mode?
 	if arguments["generate"] == true {

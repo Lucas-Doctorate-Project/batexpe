@@ -1,14 +1,14 @@
-[![pipeline status](https://gitlab.inria.fr/batsim/batexpe/badges/master/pipeline.svg)](https://gitlab.inria.fr/batsim/batexpe/commits/master)
-[![coverage report](https://gitlab.inria.fr/batsim/batexpe/badges/master/coverage.svg)](https://gitlab.inria.fr/batsim/batexpe/commits/master)
+[![pipeline status](https://framagit.org/batsim/batexpe/badges/master/pipeline.svg)](https://framagit.org/batsim/batexpe/pipelines)
+[![coverage report](https://framagit.org/batsim/batexpe/badges/master/coverage.svg)](https://framagit.org/batsim/batexpe/-/jobs)
 
 This repository contains a set of Go tools around
-[Batsim](https://gitlab.inria.fr/batsim/batsim) to simplify experiments.
+[Batsim](https://framagit.org/batsim/batsim) to simplify experiments.
 
 ## Install
 ### Via the go tool
 ```bash
-go get gitlab.inria.fr/batsim/batexpe/cmd/robin
-go get gitlab.inria.fr/batsim/batexpe/cmd/robintest
+go get framagit.org/batsim/batexpe/cmd/robin
+go get framagit.org/batsim/batexpe/cmd/robintest
 ```
 
 ### Via nix
@@ -24,5 +24,6 @@ nix-env --file ./datamovepkgs --install --attr batexpe
 - *robintest* is a *robin* wrapper mainly used to test robin.
   *robintest* notably allows to specify what (robin/batsim/scheduler)
   result is expected.
-- the multiple commands are just wrapperss around the *batexpe* Go library.  
+- the multiple commands are just wrappers around the *batexpe* library
+  (written in Go).  
   This allows users to build their own tools (in Go) with decent code reuse.

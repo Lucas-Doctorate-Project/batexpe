@@ -20,6 +20,23 @@ Robintest's public API includes:
 ## [Unreleased]
 
 [//]: ==========================================================================
+## [1.1.0] - 2018-08-11
+### Added
+- New `--no-preview-on-error` option,
+  that disables the preview of the logs of failed processes.
+
+### Changed
+- Improved the preview of the logs of failed processes:
+  - This is now written on stderr (was on stdout).
+  - This is now compatible with the `--json-logs` option, as stdout can keep
+    its JSON structure regardless of stderr previews.
+  - This is now enabled by default
+    (use `--no-preview-on-error` to keep old behaviour).
+
+### Deprecated
+- The `--preview-on-error` option is now deprecated.
+
+[//]: ==========================================================================
 ## [1.0.0] - 2018-04-12
 ### Added
 - The version given by `--version` can now be set from `git describe`.  
@@ -122,7 +139,8 @@ Robintest's public API includes:
 [changelog]: http://keepachangelog.com/en/1.0.0/
 [semver]: http://semver.org/spec/v2.0.0.html
 
-[Unreleased]: https://gitlab.inria.fr/batsim/batexpe/compare/v1.0.0...master
-[1.0.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.3.0...v1.0.0
-[0.3.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.2.0...v0.3.0
-[0.2.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.1.0...v0.2.0
+[Unreleased]: https://framagit.org/batsim/batexpe/compare/v1.1.0...master
+[1.1.0]: https://framagit.org/batsim/batexpe/compare/v1.0.0...v1.1.0
+[1.0.0]: https://framagit.org/batsim/batexpe/compare/v0.3.0...v1.0.0
+[0.3.0]: https://framagit.org/batsim/batexpe/compare/v0.2.0...v0.3.0
+[0.2.0]: https://framagit.org/batsim/batexpe/compare/v0.1.0...v0.2.0
