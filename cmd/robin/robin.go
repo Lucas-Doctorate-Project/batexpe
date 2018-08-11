@@ -1,15 +1,16 @@
 package main
 
 import (
-	"gitlab.inria.fr/batsim/batexpe"
-	"github.com/docopt/docopt-go"
+	"fmt"
+	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
+	"gitlab.inria.fr/batsim/batexpe"
 	"io/ioutil"
 	"os"
 	"strconv"
 )
 
-func setupLogging(arguments map[string]interface{}) {
+func setupLogging(arguments map[string]interface{}) (previewOnError bool) {
 	log.SetOutput(os.Stdout)
 
 	if arguments["--json-logs"] == true {
@@ -18,6 +19,7 @@ func setupLogging(arguments map[string]interface{}) {
 		customFormatter := new(log.TextFormatter)
 		customFormatter.TimestampFormat = "2006-01-02 15:04:05.000"
 		customFormatter.FullTimestamp = true
+		customFormatter.QuoteEmptyFields = true
 		log.SetFormatter(customFormatter)
 	}
 
@@ -28,6 +30,13 @@ func setupLogging(arguments map[string]interface{}) {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
+
+	previewOnError = false
+	if arguments["--preview-on-error"] == true {
+		previewOnError = true
+	}
+
+	return previewOnError
 }
 
 func ExperimentFromArgs(arguments map[string]interface{}) batexpe.Experiment {
@@ -123,6 +132,10 @@ func generateDescription(arguments map[string]interface{}) {
 }
 
 func main() {
+	os.Exit(mainReturnWithCode())
+}
+
+func mainReturnWithCode() int {
 	usage := `Robin manages the execution of one Batsim simulation.
 
 Usage:
@@ -133,9 +146,9 @@ Usage:
         [--ready-timeout=<time>]
         [--success-timeout=<time>]
         [--failure-timeout=<time>]
-        [(--verbose | --quiet | --debug)] [--json-logs]
+        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
   robin <description-file>
-        [(--verbose | --quiet | --debug)] [--json-logs]
+        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
   robin generate <description-file>
         [--output-dir=<dir>]
         [--batcmd=<batsim-command>]
@@ -144,7 +157,7 @@ Usage:
         [--ready-timeout=<time>]
         [--success-timeout=<time>]
         [--failure-timeout=<time>]
-        [(--verbose | --quiet | --debug)] [--json-logs]
+        [(--verbose | --quiet | --debug)] [(--json-logs | --preview-on-error)]
   robin -h | --help
   robin --version
 
@@ -186,10 +199,32 @@ Verbosity options:
   --quiet                       Only print critical information.
   --verbose                     Print information. Default verbosity mode.
   --debug                       Print debug information.
-  --json-logs                   Print information in JSON.`
+  --json-logs                   Print information in JSON.
+  --preview-on-error            Preview stdout and stderr of failed processes.`
 
-	arguments, _ := docopt.Parse(usage, nil, true, "0.1.0", false)
-	setupLogging(arguments)
+	ret := -1
+
+	parser := &docopt.Parser{
+		HelpHandler: func(err error, usage string) {
+			fmt.Println(usage)
+			if err != nil {
+				ret = 1
+			} else {
+				ret = 0
+			}
+		},
+		OptionsFirst: false,
+	}
+
+	arguments, err := parser.ParseArgs(usage, os.Args[1:], batexpe.Version())
+	if ret != -1 {
+		return ret
+	}
+	if err != nil {
+		return 2
+	}
+
+	previewOnError := setupLogging(arguments)
 
 	log.WithFields(log.Fields{
 		"args": arguments,
@@ -228,6 +263,6 @@ Verbosity options:
 		"failure timeout":    exp.FailureTimeout,
 	}).Debug("Instance description read")
 
-	ret := batexpe.ExecuteOne(exp)
-	os.Exit(ret)
+	ret = batexpe.ExecuteOne(exp, previewOnError)
+	return ret
 }

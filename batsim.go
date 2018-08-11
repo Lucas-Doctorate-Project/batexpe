@@ -1,8 +1,9 @@
 package batexpe
 
 import (
+	"fmt"
 	"github.com/anmitsu/go-shlex"
-	"github.com/docopt/docopt-go"
+	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -12,7 +13,7 @@ type BatsimArgs struct {
 	BatexecMode  bool
 }
 
-func ParseBatsimCommand(batcmd string) (batargs BatsimArgs) {
+func ParseBatsimCommand(batcmd string) (batargs BatsimArgs, err error) {
 	batsimDocopt := `
 A tool to simulate (via SimGrid) the behaviour of scheduling algorithms.
 
@@ -100,10 +101,8 @@ Other options:
 
 	splitCmd, err := shlex.Split(batcmd, true)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err":            err,
-			"batsim command": batcmd,
-		}).Fatal("Cannot split Batsim command")
+		return batargs, fmt.Errorf("Cannot split Batsim command (err=%s)",
+			err.Error())
 	}
 
 	log.WithFields(log.Fields{
@@ -111,18 +110,13 @@ Other options:
 	}).Debug("Batcmd -> shlex -> split")
 
 	if len(splitCmd) <= 1 {
-		log.WithFields(log.Fields{
-			"batsim command": batcmd,
-		}).Fatal("Batsim command should have at least 2 parts")
+		return batargs, fmt.Errorf("Batsim command should have at least 2 parts")
 	}
 
 	arguments, err := docopt.Parse(batsimDocopt, splitCmd[1:], true, "?",
 		false, false)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err":            err,
-			"batsim command": batcmd,
-		}).Fatal("Cannot parse Batsim command")
+		return batargs, fmt.Errorf("Cannot parse Batsim command (err=%s)", err.Error())
 	}
 
 	batargs.Socket = "tcp://localhost:28000"
@@ -147,5 +141,5 @@ Other options:
 		"batexec?":      batargs.BatexecMode,
 	}).Debug("Parsed Batsim command")
 
-	return batargs
+	return batargs, nil
 }

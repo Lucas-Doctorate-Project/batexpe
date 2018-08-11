@@ -1,0 +1,7 @@
+batcmd: batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/batsched_schedcrash_mid_segfault/out
+output-dir: /tmp/robin/batsched_schedcrash_mid_segfault
+schedcmd: "batsched -v crasher --variant_options '{\"crash_type\": \"segmentation_fault\", \"crash_on_decision_call\": true, \"crash_on_decision_call_number\": 1}'"
+simulation-timeout: 15
+ready-timeout: 5
+success-timeout: 1
+failure-timeout: 0
