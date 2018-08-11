@@ -1,0 +1,7 @@
+batcmd: batsim -p ${BATSIM_DIR}/platforms/energy_platform_homogeneous_no_net_512.xml -w ${BATSIM_DIR}/workload_profiles/batsim_paper_workload_example.json -e /tmp/robin/batsim_nosched_timeout/out --batexec
+output-dir: /tmp/robin/batsim_nosched_timeout
+schedcmd:
+simulation-timeout: 0.001
+ready-timeout: 5
+success-timeout: 5
+failure-timeout: 5

@@ -1,0 +1,58 @@
+digraph G {
+    node [style=filled,fillcolor="#A5CEE3"];
+    ranksep="0.00001"
+
+    subgraph cluster_0 {
+        sockready [shape=diamond, label="socket\n(conflicting)\nin use?"];
+        batready [shape=diamond, label="other Batsim\n(conflicting)\nin use?"];
+        readyend [label="ready"];
+
+        sockready -> readyend [label="no"];
+        batready -> readyend [label="no"];
+
+        label = "context check";
+        labeljust="r";
+        style=filled;
+        fillcolor = "#B1DF89"
+    }
+
+    subgraph cluster_1 {
+        run [label="run Batsim\nand Scheduler"];
+        execstatus [shape=diamond, label="both complete\nsuccessfully?"];
+        execend [label="Simulation OK"];
+
+        run -> execstatus;
+        execstatus -> execend [label="yes"];
+
+        label = "execution";
+        labeljust="r";
+        style=filled;
+        fillcolor = "#B1DF89"
+    }
+
+    subgraph cluster_2 {
+        kill [label="Kill pending\nprocesses and\ntheir children"];
+
+        label = "cleanup";
+        labeljust="r";
+        style=filled;
+        fillcolor = "#B1DF89"
+    }
+
+    execstatus -> kill [label="no"];
+
+    start -> sockready;
+    start -> batready;
+
+    readyend -> run;
+    execend -> endOK;
+    kill -> endFail;
+
+    sockready -> endNotrun [label="yes"];
+    batready -> endNotrun [label="yes"];
+
+    start [label="start"];
+    endOK [shape=doublecircle, label="end\nsuccess"];
+    endFail [shape=doublecircle, label="end\nfailure"];
+    endNotrun [shape=doublecircle, label="end\nfailure"];
+}
