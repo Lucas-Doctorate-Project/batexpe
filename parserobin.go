@@ -49,10 +49,16 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 		"timeout": timeout,
 	}).Debug("Starting robin")
 
+	var rresult RobinResult
+
 	if err := cmd.Start(); err != nil {
 		log.WithFields(log.Fields{
 			"command": cmd,
-		}).Fatal("Could not start robin")
+		}).Error("Could not start robin")
+		rresult.Finished = false
+		rresult.Succeeded = false
+		onexit <- rresult
+		return
 	}
 
 	robinPid := cmd.Process.Pid
@@ -60,8 +66,6 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 	go func() {
 		done <- cmd.Wait()
 	}()
-
-	var rresult RobinResult
 
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
@@ -94,7 +98,10 @@ func executeRobinWithTimeout(timeout float64, descriptionFile,
 			if err != nil {
 				log.WithFields(log.Fields{
 					"err": err,
-				}).Fatal("Cannot retrieve return code from robin.cover output")
+				}).Error("Cannot retrieve return code from robin.cover output")
+				rresult.Succeeded = false
+				onexit <- rresult
+				return
 			}
 
 			log.WithFields(log.Fields{
@@ -138,7 +145,7 @@ func retrieveRobinReturnCodeInRobincoverOutput(output string) (int, error) {
 
 	match := r.FindStringSubmatch(output)
 	if match == nil {
-		return -1, fmt.Errorf("Return line not found")
+		return 1, fmt.Errorf("Return line not found")
 	}
 
 	result := make(map[string]string)
@@ -150,7 +157,7 @@ func retrieveRobinReturnCodeInRobincoverOutput(output string) (int, error) {
 
 	returnCode, err := strconv.ParseInt(result["returnCode"], 10, 32)
 	if err != nil {
-		return -1, fmt.Errorf("Cannot convert return code %v to int",
+		return 1, fmt.Errorf("Cannot convert return code %v to int",
 			result["returnCode"])
 	}
 	return int(returnCode), nil
@@ -213,5 +220,5 @@ func WasContextClean(robinJsonLines []interface{}) bool {
 		}
 	}
 
-	return false
+	return true
 }

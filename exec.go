@@ -25,31 +25,25 @@ type CmdFinishedMsg struct {
 	State int
 }
 
-func PrepareDirs(exp Experiment) {
+func PrepareDirs(exp Experiment) error {
 	// Create output directory if needed
-	err := CreateDirIfNeeded(exp.OutputDir)
-	if err != nil {
+	outErr := CreateDirIfNeeded(exp.OutputDir)
+	logErr := CreateDirIfNeeded(exp.OutputDir + "/log")
+	cmdErr := CreateDirIfNeeded(exp.OutputDir + "/cmd")
+
+	if (outErr != nil) || (logErr != nil) || (cmdErr != nil) {
 		log.WithFields(log.Fields{
-			"directory": exp.OutputDir,
-			"err":       err,
-		}).Fatal("Cannot create output directory")
+			"output-dir":     exp.OutputDir,
+			"output-dir_err": outErr,
+			"log-dir":        exp.OutputDir + "/log",
+			"log-dir_err":    logErr,
+			"cmd-dir":        exp.OutputDir + "/cmd",
+			"cmd-dir_err":    cmdErr,
+		}).Error("Cannot create output directory")
+		return fmt.Errorf("Cannot create output directory")
 	}
 
-	err = CreateDirIfNeeded(exp.OutputDir + "/log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"directory": exp.OutputDir + "/log",
-			"err":       err,
-		}).Fatal("Cannot create log directory")
-	}
-
-	err = CreateDirIfNeeded(exp.OutputDir + "/cmd")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"directory": exp.OutputDir + "/cmd",
-			"err":       err,
-		}).Fatal("Cannot create command directory")
-	}
+	return nil
 }
 
 func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) error {
@@ -59,7 +53,8 @@ func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) error {
 			"err": err,
 			"extracted socket endpoint": batargs.Socket,
 			"batsim command":            exp.Batcmd,
-		}).Fatal("Cannot retrieve port from Batsim socket")
+		}).Error("Cannot retrieve port from Batsim socket")
+		return err
 	}
 
 	log.WithFields(log.Fields{
@@ -88,11 +83,19 @@ func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) error {
 				"socket in use":              socketInUse,
 				"conflicting batsim running": anotherBatsim,
 			}).Error("Context remains invalid")
-			return fmt.Errorf("Context remanis invalid")
-		case <-sockChan:
-			socketInUse = false
-		case <-batChan:
-			anotherBatsim = false
+			return fmt.Errorf("Context remains invalid")
+		case code := <-sockChan:
+			if code == 0 {
+				socketInUse = false
+			} else {
+				return fmt.Errorf("Could not determine whether the network port is in use")
+			}
+		case code := <-batChan:
+			if code == 0 {
+				anotherBatsim = false
+			} else {
+				return fmt.Errorf("Could not determine whether other Batsim instances are running")
+			}
 		}
 	}
 
@@ -111,7 +114,9 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 			log.WithFields(log.Fields{
 				"err":     err,
 				"command": psCmd,
-			}).Fatal("Cannot list running processes via ps")
+			}).Error("Cannot list running processes via ps")
+			onexit <- 1
+			return
 		}
 
 		conflict := false
@@ -121,21 +126,17 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 				"batcmd": batcmd,
 			}).Debug("Found a running batsim")
 
-			batargs, err := ParseBatsimCommand(batcmd)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"command": batcmd,
-					"err":     err,
-				}).Fatal("Cannot retrieve information from a running Batsim process command")
-			}
+			batargs, parseErr := ParseBatsimCommand(batcmd)
+			lineport, portErr := PortFromBatSock(batargs.Socket)
 
-			lineport, err := PortFromBatSock(batargs.Socket)
-			if err != nil {
+			if (parseErr != nil) || (portErr != nil) {
 				log.WithFields(log.Fields{
-					"err": err,
-					"extracted socket endpoint": batargs.Socket,
-					"batsim command":            batcmd,
-				}).Fatal("Cannot retrieve port from a running Batsim process command")
+					"parsing_error":        parseErr,
+					"command":              batcmd,
+					"port_retrieval_error": portErr,
+				}).Error("Cannot retrieve port from a running Batsim process command")
+				onexit <- 1
+				return
 			}
 
 			if lineport == port {
@@ -144,7 +145,7 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 		}
 
 		if !conflict {
-			onexit <- 1
+			onexit <- 0
 			return
 		} else {
 			time.Sleep(100 * time.Millisecond)
@@ -165,11 +166,13 @@ func waitTcpPortAvailableSs(port uint16, onexit chan int) {
 			log.WithFields(log.Fields{
 				"err":     err,
 				"command": ssCmd,
-			}).Fatal("Cannot list open sockets via ss")
+			}).Error("Cannot list open sockets via ss")
+			onexit <- 1
+			return
 		}
 
 		if !(r.Match(outBuf)) {
-			onexit <- 1
+			onexit <- 0
 			return
 		} else {
 			time.Sleep(100 * time.Millisecond)
@@ -308,7 +311,7 @@ func cleanupSubprocesses(pidsToKill map[string]int) {
 	}
 }
 
-func setupGuards(pidsToKill *map[string]int) {
+func setupGuards(pidsToKill *map[string]int, onAbort chan int) {
 	// Guard against ctrl+c
 	// Does not seem needed, as SIGTERM is also launched in this case
 
@@ -319,7 +322,7 @@ func setupGuards(pidsToKill *map[string]int) {
 		<-sigterm
 		log.Warn("SIGTERM received. Killing remaining subprocesses.")
 		cleanupSubprocesses(*pidsToKill)
-		os.Exit(3)
+		onAbort <- 3
 	}()
 }
 
@@ -332,31 +335,35 @@ func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 	}).Info("Starting simulation")
 
 	// Create command
-	err := ioutil.WriteFile(exp.OutputDir+"/cmd/batsim.bash", []byte(exp.Batcmd), 0755)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "/cmd/batsim.bash",
-			"err":      err,
-		}).Fatal("Cannot create file")
-	}
 	cmd := exec.Command("bash")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmd.Args = []string{cmd.Args[0], "-eux",
 		exp.OutputDir + "/cmd/batsim.bash"}
 
-	// Log simulation output
-	batlog, err := os.Create(exp.OutputDir + "/log/batsim.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "log/batsim.log",
-			"err":      err,
-		}).Fatal("Cannot create file")
+	// Create files
+	createBatsimCmdErr := ioutil.WriteFile(exp.OutputDir+"/cmd/batsim.bash",
+		[]byte(exp.Batcmd), 0755)
+	batlog, createBatsimLogErr := os.Create(exp.OutputDir + "/log/batsim.log")
+
+	if createBatsimLogErr == nil {
+		defer batlog.Close()
+		cmd.Stderr = batlog
 	}
-	defer batlog.Close()
-	cmd.Stderr = batlog
+
+	if (createBatsimCmdErr != nil) || (createBatsimLogErr != nil) {
+		log.WithFields(log.Fields{
+			"batsim cmdfile":     exp.OutputDir + "/cmd/batsim.bash",
+			"batsim cmdfile err": createBatsimCmdErr,
+			"batsim logfile":     exp.OutputDir + "log/batsim.log",
+			"batsim logfile err": createBatsimLogErr,
+		}).Error("Cannot create file")
+		return 1
+	}
 
 	// Guards against SIGINT (ctrl+c) and SIGTERM (polite kill)
 	pidsToKill := make(map[string]int)
-	setupGuards(&pidsToKill)
+	abort := make(chan int)
+	setupGuards(&pidsToKill, abort)
 
 	// Execute the process
 	start := make(chan CmdFinishedMsg)
@@ -370,10 +377,13 @@ func executeBatsimAlone(exp Experiment, previewOnError bool) int {
 		pidsToKill["Batsim"] = cmd.Process.Pid
 	}
 
-	finish1 := <-termination
-	delete(pidsToKill, "Batsim")
-	return finish1.State
-
+	select {
+	case finish1 := <-termination:
+		delete(pidsToKill, "Batsim")
+		return finish1.State
+	case abortCode := <-abort:
+		return abortCode
+	}
 }
 
 func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
@@ -392,64 +402,64 @@ func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
 	cmds := make(map[string]*exec.Cmd)
 	success := make(map[string]int)
 
-	err := ioutil.WriteFile(exp.OutputDir+"/cmd/batsim.bash", []byte(exp.Batcmd), 0755)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "/cmd/batsim.bash",
-			"err":      err,
-		}).Fatal("Cannot create file")
-	}
 	cmds["Batsim"] = exec.Command("bash")
 	cmds["Batsim"].SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmds["Batsim"].Args = []string{cmds["Batsim"].Args[0], "-eux",
 		exp.OutputDir + "/cmd/batsim.bash"}
 
-	err = ioutil.WriteFile(exp.OutputDir+"/cmd/sched.bash", []byte(exp.Schedcmd), 0755)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "/cmd/sched.bash",
-			"err":      err,
-		}).Fatal("Cannot create file")
-	}
 	cmds["Scheduler"] = exec.Command("bash")
 	cmds["Scheduler"].SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmds["Scheduler"].Args = []string{cmds["Scheduler"].Args[0], "-eux",
 		exp.OutputDir + "/cmd/sched.bash"}
 
-	// Log simulation output
-	batlog, err := os.Create(exp.OutputDir + "/log/batsim.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "log/batsim.log",
-			"err":      err,
-		}).Fatal("Cannot create file")
-	}
-	defer batlog.Close()
-	cmds["Batsim"].Stderr = batlog
+	// Create files
+	createBatsimCmdErr := ioutil.WriteFile(exp.OutputDir+"/cmd/batsim.bash",
+		[]byte(exp.Batcmd), 0755)
+	batlog, createBatsimLogErr := os.Create(exp.OutputDir + "/log/batsim.log")
+	createSchedCmdErr := ioutil.WriteFile(exp.OutputDir+"/cmd/sched.bash",
+		[]byte(exp.Schedcmd), 0755)
+	schedout, createSchedLogErr := os.Create(exp.OutputDir +
+		"/log/sched.out.log")
+	schederr, createSchedErrErr := os.Create(exp.OutputDir +
+		"/log/sched.err.log")
 
-	schedout, err := os.Create(exp.OutputDir + "/log/sched.out.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "/log/sched.out.log",
-			"err":      err,
-		}).Fatal("Cannot create file")
+	if createBatsimLogErr == nil {
+		defer batlog.Close()
+		cmds["Batsim"].Stderr = batlog
 	}
-	defer schedout.Close()
-	cmds["Scheduler"].Stdout = schedout
 
-	schederr, err := os.Create(exp.OutputDir + "/log/sched.err.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": exp.OutputDir + "/log/sched.err.log",
-			"err":      err,
-		}).Fatal("Cannot create file")
+	if createSchedLogErr == nil {
+		defer schedout.Close()
+		cmds["Scheduler"].Stdout = schedout
 	}
-	defer schederr.Close()
-	cmds["Scheduler"].Stderr = schederr
+
+	if createSchedErrErr == nil {
+		defer schederr.Close()
+		cmds["Scheduler"].Stderr = schederr
+	}
+
+	if (createBatsimCmdErr != nil) || (createSchedCmdErr != nil) ||
+		(createBatsimLogErr != nil) ||
+		(createSchedLogErr != nil) || (createSchedErrErr != nil) {
+		log.WithFields(log.Fields{
+			"batsim cmdfile":              exp.OutputDir + "/cmd/batsim.bash",
+			"batsim cmdfile err":          createBatsimCmdErr,
+			"batsim logfile":              exp.OutputDir + "log/batsim.log",
+			"batsim logfile err":          createBatsimLogErr,
+			"scheduler cmdfile":           exp.OutputDir + "/cmd/sched.bash",
+			"scheduler cmdfile err":       createSchedCmdErr,
+			"scheduler logfile (out)":     exp.OutputDir + "/log/sched.out.log",
+			"scheduler logfile (out) err": createSchedLogErr,
+			"scheduler logfile (err)":     exp.OutputDir + "/log/sched.err.log",
+			"scheduler logfile (err) err": createSchedErrErr,
+		}).Error("Cannot create file")
+		return 1
+	}
 
 	// Guards against SIGINT (ctrl+c) and SIGTERM (polite kill)
 	pidsToKill := make(map[string]int)
-	setupGuards(&pidsToKill)
+	abort := make(chan int)
+	setupGuards(&pidsToKill, abort)
 
 	// Execute the processes
 	start := make(chan CmdFinishedMsg)
@@ -535,13 +545,21 @@ func executeBatsimAndSched(exp Experiment, previewOnError bool) int {
 	delete(pidsToKill, finish2.Name)
 	success[finish2.Name] = finish2.State
 
-	return max(success["Batsim"], success["Scheduler"])
+	select {
+	case <-time.After(time.Duration(1) * time.Millisecond):
+		return max(success["Batsim"], success["Scheduler"])
+	case abortCode := <-abort:
+		return abortCode
+	}
 }
 
 // Execute one Batsim simulation
 func ExecuteOne(exp Experiment, previewOnError bool) int {
 	// Prepare execution
-	PrepareDirs(exp)
+	err := PrepareDirs(exp)
+	if err != nil {
+		return 1
+	}
 
 	// Sets unset command as empty string
 	if exp.Schedcmd == "schedcmd-unset" {
@@ -554,7 +572,8 @@ func ExecuteOne(exp Experiment, previewOnError bool) int {
 		log.WithFields(log.Fields{
 			"command": exp.Batcmd,
 			"err":     err,
-		}).Fatal("Cannot retrieve information from Batsim command")
+		}).Error("Cannot retrieve information from Batsim command")
+		return 1
 	}
 
 	if !strings.HasPrefix(batargs.ExportPrefix, exp.OutputDir) {
@@ -571,7 +590,8 @@ func ExecuteOne(exp Experiment, previewOnError bool) int {
 			log.WithFields(log.Fields{
 				"batsim command":    exp.Batcmd,
 				"scheduler command": exp.Schedcmd,
-			}).Fatal("Sched command unset but Batsim is not in batexec mode")
+			}).Error("Sched command unset but Batsim is not in batexec mode")
+			return 1
 		}
 
 		return executeBatsimAlone(exp, previewOnError)
@@ -581,7 +601,8 @@ func ExecuteOne(exp Experiment, previewOnError bool) int {
 			log.WithFields(log.Fields{
 				"batsim command":    exp.Batcmd,
 				"scheduler command": exp.Schedcmd,
-			}).Fatal("Sched command set but Batsim is in batexec mode")
+			}).Error("Sched command set but Batsim is in batexec mode")
+			return 1
 		}
 
 		// Wait for context to be ready (open sockets, batsim processes...)
@@ -592,8 +613,6 @@ func ExecuteOne(exp Experiment, previewOnError bool) int {
 
 		return executeBatsimAndSched(exp, previewOnError)
 	}
-
-	return -1
 }
 
 func KillProcess(pid int) {

@@ -1,3 +1,14 @@
 *.covout
 coverage-report.txt
 *-cover.bats
+bin/
+test/robin
+test/robin.cover
+test/ps
+test/ss
+test/wc
+test/head
+test/tail
+test/myrobintest
+test/fake-batsim
+test/unwritable-dir

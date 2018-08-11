@@ -16,7 +16,7 @@
 @test "cli-robin-version" {
     run robin --version
     [ "$status" -eq 0 ]
-    [ $(echo "${lines[0]}" | grep -o -E '^[0-9]+\.[0-9]+\.[0-9]+$') == "${lines[0]}" ]
+    [ $(echo "${lines[0]}" | grep -o -E 'v[0-9]+\.[0-9]+\.[0-9]+.*') == "${lines[0]}" ]
 }
 
 @test "cli-robin-nonexistent-desc-file" {

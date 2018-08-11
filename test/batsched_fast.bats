@@ -27,6 +27,7 @@ teardown() {
     not_running batsim
     not_running robin
     not_running batsched
+    rm -rf ./unwritable-dir
 }
 
 @test "batsched-ok" {
@@ -77,3 +78,22 @@ teardown() {
     good_return_or_print
 }
 
+@test "batsched-schedcrash-end-segfault-long-preview" {
+    run robin batsched_schedcrash_end_segfault_long.yaml --preview-on-error
+    [ "$status" -ne 0 ]
+}
+
+@test "batsched-schedcrash-end-segfault-long-preview-quiet" {
+    run robin batsched_schedcrash_end_segfault_long_quiet.yaml --preview-on-error
+    [ "$status" -ne 0 ]
+}
+
+@test "batsched-robin-cannot-write-files" {
+    mkdir -p unwritable-dir/
+    touch unwritable-dir/cmd
+
+    run robintest invalid-desc-files/unwritable_batsched.yaml \
+                  --test-timeout 30 \
+                  --expect-robin-failure ${RT_CLEAN_CTX}
+    good_return_or_print
+}

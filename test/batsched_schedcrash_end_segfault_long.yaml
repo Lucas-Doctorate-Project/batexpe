@@ -1,0 +1,7 @@
+batcmd: batsim -p ${BATSIM_DIR}/platforms/energy_platform_homogeneous_no_net_128.xml -w ${BATSIM_DIR}/workload_profiles/batsim_paper_workload_example.json -e /tmp/robin/batsched_schedcrash_end_segfault_long/out
+output-dir: /tmp/robin/batsched_schedcrash_end_segfault_long
+schedcmd: "batsched -v crasher --variant_options '{\"crash_type\": \"segmentation_fault\", \"crash_on_end\": true}'"
+simulation-timeout: 15
+ready-timeout: 5
+success-timeout: 1
+failure-timeout: 0

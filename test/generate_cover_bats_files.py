@@ -24,10 +24,23 @@ def generate_bats_file(input_filename, output_filename):
                         "__bypass--cover={f}.r.{c}.covout".format(
                             f=input_filename, c=repl_count), line)
                     repl_count += 1
+                elif """run PATH=".:${PATH}" robintest""" in line:
+                    line = re.sub("""run PATH=".:\${PATH}" robintest\\b""",
+                        'run PATH=".:${{PATH}}" robintest.cover '
+                        "-test.coverprofile={f}.rt.{c}.covout "
+                        "__bypass--cover={f}.r.{c}.covout".format(
+                            f=input_filename, c=repl_count), line)
+                    repl_count += 1
                 elif "run robin" in line:
                     line = re.sub("""run robin\\b""",
                         "run robin.cover "
                         "-test.coverprofile={f}.r.{c}.covout".format(
+                            f=input_filename, c=repl_count), line)
+                    repl_count += 1
+                elif '''"robin" bat''' in line:
+                    line = re.sub('''"robin" bat''',
+                        '"robin.cover" '
+                        "-test.coverprofile={f}.r.{c}.covout bat".format(
                             f=input_filename, c=repl_count), line)
                     repl_count += 1
                 elif '[ "$status" -ne 0 ]' in line:
@@ -50,9 +63,14 @@ ROBINTEST_FILES = ["batsched_fast.bats",
                    "nosched.bats",
                    "robintest_cli.bats",
                    "robintest_expectedfail.bats",
-                   "robintest_expectedfail_timeout.bats"
+                   "robintest_expectedfail_timeout.bats",
+                   "robintest_mock.bats",
+                   "badinputfiles.bats"
                   ]
-ROBIN_FILES = ["robin_cli.bats"]
+ROBIN_FILES = ["robin_cli.bats",
+               "robin_mock.bats",
+               "kill.bats"
+              ]
 
 for robintest_file in ROBINTEST_FILES + ROBIN_FILES:
     generate_bats_file(robintest_file, re.sub(

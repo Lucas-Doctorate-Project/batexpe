@@ -10,6 +10,10 @@ import (
 	"strconv"
 )
 
+var (
+	version string
+)
+
 func setupLogging(arguments map[string]interface{}) (previewOnError bool) {
 	log.SetOutput(os.Stdout)
 
@@ -127,17 +131,17 @@ func generateDescription(arguments map[string]interface{}) error {
 		return err
 	}
 
-	yam := batexpe.ToYaml(exp)
-
+	yam, generateYamlErr := batexpe.ToYaml(exp)
 	fil := arguments["<description-file>"].(string)
+	writeFileErr := ioutil.WriteFile(fil, []byte(yam), 0644)
 
-	err = ioutil.WriteFile(fil, []byte(yam), 0644)
-	if err != nil {
+	if (generateYamlErr != nil) || (writeFileErr != nil) {
 		log.WithFields(log.Fields{
-			"err":      err,
-			"filename": fil,
+			"generate yaml err": generateYamlErr,
+			"write file err:":   writeFileErr,
+			"filename":          fil,
 		}).Error("Cannot write file")
-		return fmt.Errorf("Cannot write file")
+		return fmt.Errorf("Cannot generate description file")
 	}
 
 	return nil
@@ -214,6 +218,11 @@ Verbosity options:
   --json-logs                   Print information in JSON.
   --preview-on-error            Preview stdout and stderr of failed processes.`
 
+	robinVersion := version
+	if robinVersion == "" {
+		robinVersion = batexpe.Version()
+	}
+
 	ret := -1
 
 	parser := &docopt.Parser{
@@ -228,7 +237,7 @@ Verbosity options:
 		OptionsFirst: false,
 	}
 
-	arguments, _ := parser.ParseArgs(usage, os.Args[1:], batexpe.Version())
+	arguments, _ := parser.ParseArgs(usage, os.Args[1:], robinVersion)
 	if ret != -1 {
 		return ret
 	}
@@ -263,7 +272,10 @@ Verbosity options:
 			return 1
 		}
 
-		exp = batexpe.FromYaml(string(byt))
+		exp, err = batexpe.FromYaml(string(byt))
+		if err != nil {
+			return 1
+		}
 	} else {
 		var err error
 		exp, err = ExperimentFromArgs(arguments)

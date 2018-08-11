@@ -20,6 +20,30 @@ Robintest's public API includes:
 ## [Unreleased]
 
 [//]: ==========================================================================
+## [1.0.0] - 2018-04-12
+### Added
+- The version given by `--version` can now be set from `git describe`.  
+  For build convenience's sake, a `Makefile` is provided at the
+  repository's root.
+
+### Changed
+- Most features are now tested and seem to work.  
+  All code is covered (maybe not fully on the CI yet).
+- All calls to `log.Fatal` or `os.Exit` have been removed.
+  The following functions now also return an error:
+  - `FromYaml`, `IsBatsimOrBatschedRunning`, `PrepareDirs`, `ToYaml`
+- robintest now consider that robin's execution context was clean during
+  execution unless it encounters a log line stating the opposite.  
+  Previously, robintest expected the execution context to be busy by default
+  (unless encountering a log line stating the opposite).
+
+### Fixed
+- Setgpid was not set on some user-given commands (batsim command when batsim
+  was launched without scheduler, and the check script).
+  This resulted in Kill not working as expected (only the subprocess was
+  killed, not the subprocess and all its children).
+
+[//]: ==========================================================================
 ## [0.3.0] - 2018-04-08
 ### Added
 - More tests, coverage reports in CI.
@@ -98,6 +122,7 @@ Robintest's public API includes:
 [changelog]: http://keepachangelog.com/en/1.0.0/
 [semver]: http://semver.org/spec/v2.0.0.html
 
-[Unreleased]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.3.0...master
+[Unreleased]: https://gitlab.inria.fr/batsim/batexpe/compare/v1.0.0...master
+[1.0.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.3.0...v1.0.0
 [0.3.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://gitlab.inria.fr/batsim/batexpe/compare/v0.1.0...v0.2.0

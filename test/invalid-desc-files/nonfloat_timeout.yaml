@@ -1,0 +1,7 @@
+batcmd: batsim -p ${BATSIM_DIR}/platforms/small_platform.xml -w ${BATSIM_DIR}/workload_profiles/test_workload_profile.json -e /tmp/robin/nonfloat_timeout/out --batexec
+output-dir: /tmp/robin/nonfloat_timeout
+schedcmd: ""
+simulation-timeout: definitively not a float
+ready-timeout: 5
+success-timeout: 5
+failure-timeout: 0

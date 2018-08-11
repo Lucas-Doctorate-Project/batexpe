@@ -10,6 +10,11 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
+)
+
+var (
+	version string
 )
 
 const (
@@ -61,6 +66,11 @@ Usage:
   robintest -h | --help
   robintest --version`
 
+	robintestVersion := version
+	if robintestVersion == "" {
+		robintestVersion = batexpe.Version()
+	}
+
 	ret := -1
 
 	parser := &docopt.Parser{
@@ -75,7 +85,7 @@ Usage:
 		OptionsFirst: false,
 	}
 
-	arguments, _ := parser.ParseArgs(usage, os.Args[1:], batexpe.Version())
+	arguments, _ := parser.ParseArgs(usage, os.Args[1:], robintestVersion)
 	if ret != -1 {
 		return ret
 	}
@@ -173,18 +183,22 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 	// Computing whether the context is clean or not is done by checking whether
 	// any batsim or batsched is running. This is intentionally done with a
 	// different function (and technique) that the one done within robin.
-	ctxCleanAtBegin := batexpe.IsBatsimOrBatschedRunning() == false
-	rresult := batexpe.RunRobin(descriptionFile, coverFile, testTimeout)
-	ctxCleanAtEnd := batexpe.IsBatsimOrBatschedRunning() == false
 
-	jsonLines, err := batexpe.ParseRobinOutput(rresult.Output)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Fatal("Could not parse robin output")
-	}
+	batRunningAtBegin, err1 := batexpe.IsBatsimOrBatschedRunning()
+	ctxCleanAtBegin := batRunningAtBegin == false
+
+	rresult := batexpe.RunRobin(descriptionFile, coverFile, testTimeout)
+
+	batRunningAtEnd, err2 := batexpe.IsBatsimOrBatschedRunning()
+	ctxCleanAtEnd := batRunningAtEnd == false
 
 	robintestReturnValue := 0
+
+	jsonLines, parseRobinOutputErr := batexpe.ParseRobinOutput(rresult.Output)
+
+	if (err1 != nil) || (err2 != nil) {
+		robintestReturnValue = 1
+	}
 
 	// Robin result
 	if robinExpectation != EXPECT_NOTHING {
@@ -327,22 +341,26 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 					"err":      err,
 					"filename": descriptionFile,
 				}).Error("Cannot open description file")
-				return 1
+				robintestReturnValue = 1
 			}
 
-			exp := batexpe.FromYaml(string(byt))
+			exp, err := batexpe.FromYaml(string(byt))
+			if err != nil {
+				robintestReturnValue = 1
+			}
+
 			batargs, err := batexpe.ParseBatsimCommand(exp.Batcmd)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"err": err,
 				}).Error("Cannot parse Batsim command")
-				return 1
+				robintestReturnValue = 1
 			}
 
 			checkScriptSuccessful, err := RunCheckScript(resultCheckScript,
 				exp.OutputDir, batargs.ExportPrefix, testTimeout)
 			if err != nil {
-				return 1
+				robintestReturnValue = 1
 			}
 
 			if !checkScriptSuccessful {
@@ -351,35 +369,44 @@ func RobinTest(descriptionFile, coverFile, resultCheckScript string,
 		}
 	}
 
+	if parseRobinOutputErr != nil {
+		log.WithFields(log.Fields{
+			"err": parseRobinOutputErr,
+		}).Error("Could not parse robin output")
+		robintestReturnValue = 1
+	}
+
 	return robintestReturnValue
 }
 
 func RunCheckScript(resultCheckScript, robinOutputDir, batsimExportPrefix string,
 	checkTimeout float64) (bool, error) {
 	cmd := exec.Command(resultCheckScript)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // To kill subprocesses later on
 	cmd.Args = []string{cmd.Args[0], batsimExportPrefix}
 
-	checkout, err := os.Create(robinOutputDir + "/log/check.out.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": robinOutputDir + "/log/check.out.log",
-			"err":      err,
-		}).Error("Cannot create file")
-		return false, err
-	}
-	defer checkout.Close()
-	cmd.Stdout = checkout
+	checkout, outErr := os.Create(robinOutputDir + "/log/check.out.log")
+	checkerr, errErr := os.Create(robinOutputDir + "/log/check.err.log")
 
-	checkerr, err := os.Create(robinOutputDir + "/log/check.err.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"filename": robinOutputDir + "/log/check.err.log",
-			"err":      err,
-		}).Error("Cannot create file")
-		return false, err
+	if outErr == nil {
+		defer checkout.Close()
+		cmd.Stdout = checkout
 	}
-	defer checkerr.Close()
-	cmd.Stderr = checkerr
+
+	if errErr == nil {
+		defer checkerr.Close()
+		cmd.Stderr = checkerr
+	}
+
+	if (outErr != nil) || (errErr != nil) {
+		log.WithFields(log.Fields{
+			"out_filename": robinOutputDir + "/log/check.out.log",
+			"out_err":      outErr,
+			"err_filename": robinOutputDir + "/log/check.err.log",
+			"err_err":      errErr,
+		}).Error("Cannot create file")
+		return false, fmt.Errorf("Cannot create file")
+	}
 
 	start := make(chan batexpe.CmdFinishedMsg)
 	termination := make(chan batexpe.CmdFinishedMsg)
