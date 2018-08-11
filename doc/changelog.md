@@ -18,6 +18,9 @@ Robintest's public API includes:
 
 [//]: ==========================================================================
 ## [Unreleased]
+
+[//]: ==========================================================================
+## [1.1.0] - 2018-08-11
 ### Added
 - New `--no-preview-on-error` option,
   that disables the preview of the logs of failed processes.
@@ -136,7 +139,8 @@ Robintest's public API includes:
 [changelog]: http://keepachangelog.com/en/1.0.0/
 [semver]: http://semver.org/spec/v2.0.0.html
 
-[Unreleased]: https://framagit.org/batsim/batexpe/compare/v1.0.0...master
+[Unreleased]: https://framagit.org/batsim/batexpe/compare/v1.1.0...master
+[1.1.0]: https://framagit.org/batsim/batexpe/compare/v1.0.0...v1.1.0
 [1.0.0]: https://framagit.org/batsim/batexpe/compare/v0.3.0...v1.0.0
 [0.3.0]: https://framagit.org/batsim/batexpe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://framagit.org/batsim/batexpe/compare/v0.1.0...v0.2.0
