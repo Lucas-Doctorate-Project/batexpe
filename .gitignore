@@ -1,1 +1,3 @@
 *.covout
+coverage-report.txt
+*-cover.bats

@@ -1,11 +1,15 @@
 package main
 
 import (
+	"fmt"
 	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 	"gitlab.inria.fr/batsim/batexpe"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -16,20 +20,27 @@ const (
 	EXPECT_KILLED
 )
 
-const (
-	UNEXPECTED_ROBIN_SUCCESS_STATE int = 1 << iota
-	UNEXPECTED_ROBIN_KILL_STATE
-	UNEXPECTED_BATSIM_SUCCESS_STATE
-	UNEXPECTED_BATSIM_KILL_STATE
-	UNEXPECTED_SCHED_SUCCESS_STATE
-	UNEXPECTED_SCHED_PRESENCE_STATE
-	UNEXPECTED_SCHED_KILL_STATE
-	UNEXPECTED_CONTEXT_CLEANLINESS
-	UNEXPECTED_CONTEXT_CLEANLINESS_AT_BEGIN
-	UNEXPECTED_CONTEXT_CLEANLINESS_AT_END
-)
+func setupLogging(arguments map[string]interface{}) {
+	log.SetOutput(os.Stdout)
+
+	customFormatter := new(log.TextFormatter)
+	customFormatter.TimestampFormat = "2006-01-02 15:04:05.000"
+	customFormatter.FullTimestamp = true
+	customFormatter.QuoteEmptyFields = true
+	log.SetFormatter(customFormatter)
+
+	if arguments["--debug"] == true {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+}
 
 func main() {
+	os.Exit(mainReturnWithCode())
+}
+
+func mainReturnWithCode() int {
 	usage := `Tests one robin execution.
 
 Usage: 
@@ -44,12 +55,32 @@ Usage:
   			[(--expect-ctx-clean | --expect-ctx-busy)]
   			[(--expect-ctx-clean-at-begin | --expect-ctx-busy-at-begin)]
   			[(--expect-ctx-clean-at-end | --expect-ctx-busy-at-end)]
+  			[--result-check-script=<file>]
   			[--cover=<file>]
-
+  			[--debug]
   robintest -h | --help
   robintest --version`
 
-	arguments, _ := docopt.Parse(usage, nil, true, batexpe.Version(), false)
+	ret := -1
+
+	parser := &docopt.Parser{
+		HelpHandler: func(err error, usage string) {
+			fmt.Println(usage)
+			if err != nil {
+				ret = 1
+			} else {
+				ret = 0
+			}
+		},
+		OptionsFirst: false,
+	}
+
+	arguments, _ := parser.ParseArgs(usage, os.Args[1:], batexpe.Version())
+	if ret != -1 {
+		return ret
+	}
+
+	setupLogging(arguments)
 
 	// Has robin been successful? (returned 0 before test timeout)
 	robinExpectation := EXPECT_NOTHING
@@ -109,7 +140,11 @@ Usage:
 
 	testTimeout, err := strconv.ParseFloat(arguments["--test-timeout"].(string), 64)
 	if err != nil {
-		panic("Invalid test-timeout value: Cannot convert to float")
+		log.WithFields(log.Fields{
+			"err":            err,
+			"--test-timeout": arguments["--test-timeout"].(string),
+		}).Error("Invalid test timeout")
+		return 1
 	}
 
 	coverFile := ""
@@ -117,15 +152,21 @@ Usage:
 		coverFile = arguments["--cover"].(string)
 	}
 
+	resultCheckScript := ""
+	if arguments["--result-check-script"] != nil {
+		resultCheckScript = arguments["--result-check-script"].(string)
+	}
+
 	testResult := RobinTest(arguments["<description-file>"].(string),
-		coverFile, testTimeout,
+		coverFile, resultCheckScript, testTimeout,
 		robinExpectation, batsimExpectation, schedExpectation,
 		ctxExpectation, ctxExpectationAtBegin, ctxExpectationAtEnd)
 
-	os.Exit(testResult)
+	return testResult
 }
 
-func RobinTest(descriptionFile, coverFile string, testTimeout float64,
+func RobinTest(descriptionFile, coverFile, resultCheckScript string,
+	testTimeout float64,
 	robinExpectation, batsimExpectation, schedExpectation,
 	ctxExpectation, ctxExpectationAtBegin, ctxExpectationAtEnd int) int {
 
@@ -149,7 +190,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 	if robinExpectation != EXPECT_NOTHING {
 		expectedRobinSuccess := robinExpectation == EXPECT_TRUE
 		expectedRobinKilled := robinExpectation == EXPECT_KILLED
-		robinSuccess := rresult.ReturnCode == 0
+		robinSuccess := rresult.Succeeded
 		robinKilled := rresult.Finished == false
 
 		if robinSuccess != expectedRobinSuccess {
@@ -158,7 +199,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 				"got":      robinSuccess,
 			}).Error("Unexpected robin success state")
 
-			robintestReturnValue += UNEXPECTED_ROBIN_SUCCESS_STATE
+			robintestReturnValue = 1
 		}
 
 		if robinKilled != expectedRobinKilled {
@@ -167,7 +208,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 				"got":      robinKilled,
 			}).Error("Unexpected robin kill state")
 
-			robintestReturnValue += UNEXPECTED_ROBIN_KILL_STATE
+			robintestReturnValue = 1
 		}
 	}
 
@@ -183,7 +224,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 				"got":      batsimSuccess,
 			}).Error("Unexpected batsim success state")
 
-			robintestReturnValue += UNEXPECTED_BATSIM_SUCCESS_STATE
+			robintestReturnValue = 1
 		}
 
 		if batsimKilled != expectedBatsimKilled {
@@ -192,7 +233,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 				"got":      batsimKilled,
 			}).Error("Unexpected batsim kill state")
 
-			robintestReturnValue += UNEXPECTED_BATSIM_KILL_STATE
+			robintestReturnValue = 1
 		}
 	}
 
@@ -209,7 +250,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 				"got":      schedSuccess,
 			}).Error("Unexpected sched success state")
 
-			robintestReturnValue += UNEXPECTED_SCHED_SUCCESS_STATE
+			robintestReturnValue = 1
 		}
 
 		if schedPresence != expectedSchedPresence {
@@ -218,7 +259,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 				"got":      schedPresence,
 			}).Error("Unexpected sched presence state")
 
-			robintestReturnValue += UNEXPECTED_SCHED_PRESENCE_STATE
+			robintestReturnValue = 1
 		}
 
 		if schedKilled != expectedSchedKilled {
@@ -227,7 +268,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 				"got":      schedKilled,
 			}).Error("Unexpected sched kill state")
 
-			robintestReturnValue += UNEXPECTED_SCHED_KILL_STATE
+			robintestReturnValue = 1
 		}
 	}
 
@@ -242,7 +283,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 				"got":      contextClean,
 			}).Error("Unexpected context cleanliness during robin's execution")
 
-			robintestReturnValue += UNEXPECTED_CONTEXT_CLEANLINESS
+			robintestReturnValue = 1
 		}
 	}
 
@@ -256,7 +297,7 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 				"got":      ctxCleanAtBegin,
 			}).Error("Unexpected context cleanliness before robin's execution")
 
-			robintestReturnValue += UNEXPECTED_CONTEXT_CLEANLINESS_AT_BEGIN
+			robintestReturnValue = 1
 		}
 	}
 
@@ -270,9 +311,86 @@ func RobinTest(descriptionFile, coverFile string, testTimeout float64,
 				"got":      ctxCleanAtEnd,
 			}).Error("Unexpected context cleanliness after robin's execution")
 
-			robintestReturnValue += UNEXPECTED_CONTEXT_CLEANLINESS_AT_END
+			robintestReturnValue = 1
+		}
+	}
+
+	// Run check script if everything went as expected so far
+	if robintestReturnValue == 0 {
+		if resultCheckScript != "" {
+			// First, we need to retrieve Batsim output prefix.
+			// To do so, we can parse the batsim command defined in
+			// the robin description file.
+			byt, err := ioutil.ReadFile(descriptionFile)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err":      err,
+					"filename": descriptionFile,
+				}).Error("Cannot open description file")
+				return 1
+			}
+
+			exp := batexpe.FromYaml(string(byt))
+			batargs, err := batexpe.ParseBatsimCommand(exp.Batcmd)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err": err,
+				}).Error("Cannot parse Batsim command")
+				return 1
+			}
+
+			checkScriptSuccessful, err := RunCheckScript(resultCheckScript,
+				exp.OutputDir, batargs.ExportPrefix, testTimeout)
+			if err != nil {
+				return 1
+			}
+
+			if !checkScriptSuccessful {
+				robintestReturnValue = 1
+			}
 		}
 	}
 
 	return robintestReturnValue
+}
+
+func RunCheckScript(resultCheckScript, robinOutputDir, batsimExportPrefix string,
+	checkTimeout float64) (bool, error) {
+	cmd := exec.Command(resultCheckScript)
+	cmd.Args = []string{cmd.Args[0], batsimExportPrefix}
+
+	checkout, err := os.Create(robinOutputDir + "/log/check.out.log")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"filename": robinOutputDir + "/log/check.out.log",
+			"err":      err,
+		}).Error("Cannot create file")
+		return false, err
+	}
+	defer checkout.Close()
+	cmd.Stdout = checkout
+
+	checkerr, err := os.Create(robinOutputDir + "/log/check.err.log")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"filename": robinOutputDir + "/log/check.err.log",
+			"err":      err,
+		}).Error("Cannot create file")
+		return false, err
+	}
+	defer checkerr.Close()
+	cmd.Stderr = checkerr
+
+	start := make(chan batexpe.CmdFinishedMsg)
+	termination := make(chan batexpe.CmdFinishedMsg)
+
+	go batexpe.ExecuteTimeout("Check", strings.Join(cmd.Args, " "),
+		"/dev/null",
+		robinOutputDir+"/log/check.out.log",
+		robinOutputDir+"/log/check.err.log",
+		"Check", cmd, checkTimeout, start, termination, true)
+
+	<-start
+	finish1 := <-termination
+	return finish1.State == batexpe.SUCCESS, nil
 }
