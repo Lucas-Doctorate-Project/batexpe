@@ -18,6 +18,13 @@ Robintest's public API includes:
 
 [//]: ==========================================================================
 ## [Unreleased]
+### Changed
+- Batsim commands are no longer directly parsed by batexpe.
+  This is now delegated to Batsim by calling it with
+  the `--dump-execution-context` command-line flag.
+- Robin now takes Redis into account to detect whether two batsim instances
+  are conflicting or not. Previously, only the port used between Batsim and
+  the scheduler was checked.
 
 [//]: ==========================================================================
 ## [1.1.0] - 2018-08-11
