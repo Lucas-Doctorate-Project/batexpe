@@ -50,7 +50,7 @@ func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) error {
 	port, err := PortFromBatSock(batargs.Socket)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"err": err,
+			"err":                       err,
 			"extracted socket endpoint": batargs.Socket,
 			"batsim command":            exp.Batcmd,
 		}).Error("Cannot retrieve port from Batsim socket")
@@ -122,25 +122,28 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 		conflict := false
 		for _, batcmd := range r.FindAllString(string(outBuf), -1) {
 
-			log.WithFields(log.Fields{
-				"batcmd": batcmd,
-			}).Debug("Found a running batsim")
-
-			batargs, parseErr := ParseBatsimCommand(batcmd)
-			lineport, portErr := PortFromBatSock(batargs.Socket)
-
-			if (parseErr != nil) || (portErr != nil) {
+			if !strings.Contains(batcmd, "--dump-execution-context") {
 				log.WithFields(log.Fields{
-					"parsing_error":        parseErr,
-					"command":              batcmd,
-					"port_retrieval_error": portErr,
-				}).Error("Cannot retrieve port from a running Batsim process command")
-				onexit <- 1
-				return
-			}
+					"batcmd": batcmd,
+				}).Debug("Found a running batsim")
 
-			if lineport == port {
-				conflict = true
+				batargs, parseErr := ParseBatsimCommand(batcmd)
+				lineport, portErr := PortFromBatSock(batargs.Socket)
+
+				if (parseErr != nil) || (portErr != nil) {
+					log.WithFields(log.Fields{
+						"parsing_error":        parseErr,
+						"parsed_socket":        batargs.Socket,
+						"command":              batcmd,
+						"port_retrieval_error": portErr,
+					}).Error("Cannot retrieve port from a running Batsim process command")
+					onexit <- 1
+					return
+				}
+
+				if lineport == port {
+					conflict = true
+				}
 			}
 		}
 
