@@ -10,9 +10,13 @@ import (
 )
 
 type BatsimArgs struct {
-	Socket       string
-	ExportPrefix string
-	BatexecMode  bool
+	Socket        string
+	ExportPrefix  string
+	BatexecMode   bool
+	RedisEnabled  bool
+	RedisHostname string
+	RedisPort     int
+	RedisPrefix   string
 }
 
 func ParseBatsimCommand(batcmd string) (batargs BatsimArgs, err error) {
@@ -54,6 +58,10 @@ func ParseBatsimCommand(batcmd string) (batargs BatsimArgs, err error) {
 	batargs.Socket = jsonData["socket_endpoint"].(string)
 	batargs.ExportPrefix = jsonData["export_prefix"].(string)
 	batargs.BatexecMode = !jsonData["external_scheduler"].(bool)
+	batargs.RedisEnabled = jsonData["redis_enabled"].(bool)
+	batargs.RedisHostname = jsonData["redis_hostname"].(string)
+	batargs.RedisPort = int(jsonData["redis_port"].(float64))
+	batargs.RedisPrefix = jsonData["redis_prefix"].(string)
 
 	return batargs, nil
 }

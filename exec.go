@@ -71,7 +71,7 @@ func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) error {
 	batChan := make(chan int)
 
 	go waitTcpPortAvailableSs(port, sockChan)
-	go waitNoConflictingBatsim(port, batChan)
+	go waitNoConflictingBatsim(batargs, batChan)
 
 	for socketInUse || anotherBatsim {
 		select {
@@ -102,7 +102,27 @@ func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) error {
 	return nil
 }
 
-func waitNoConflictingBatsim(port uint16, onexit chan int) {
+func areConflictingBatsimInstances(batCtx1, batCtx2 BatsimArgs) bool {
+	port1, err1 := PortFromBatSock(batCtx1.Socket)
+	port2, err2 := PortFromBatSock(batCtx2.Socket)
+
+	if (err1 != nil) && (err2 != nil) {
+		if port1 == port2 {
+			return true
+		}
+	}
+
+	if (batCtx1.RedisEnabled && batCtx2.RedisEnabled) &&
+		(batCtx1.RedisHostname == batCtx2.RedisHostname) &&
+		(batCtx1.RedisPort == batCtx2.RedisPort) &&
+		(batCtx1.RedisPrefix == batCtx2.RedisPrefix) {
+		return true
+	}
+
+	return false
+}
+
+func waitNoConflictingBatsim(batargsToLaunch BatsimArgs, onexit chan int) {
 	r := regexp.MustCompile(`(?m)^\S*\bbatsim\s+.*$`)
 	for {
 		// Retrieve running Batsim processes
@@ -121,28 +141,22 @@ func waitNoConflictingBatsim(port uint16, onexit chan int) {
 
 		conflict := false
 		for _, batcmd := range r.FindAllString(string(outBuf), -1) {
-
 			if !strings.Contains(batcmd, "--dump-execution-context") {
 				log.WithFields(log.Fields{
 					"batcmd": batcmd,
 				}).Debug("Found a running batsim")
 
 				batargs, parseErr := ParseBatsimCommand(batcmd)
-				lineport, portErr := PortFromBatSock(batargs.Socket)
+				if parseErr == nil {
+					conflictHere := areConflictingBatsimInstances(batargsToLaunch, batargs)
+					if conflictHere {
+						log.WithFields(log.Fields{
+							"instance to launch": batargsToLaunch,
+							"running instance":   batargs,
+						}).Debug("Conflict with a running instance")
 
-				if (parseErr != nil) || (portErr != nil) {
-					log.WithFields(log.Fields{
-						"parsing_error":        parseErr,
-						"parsed_socket":        batargs.Socket,
-						"command":              batcmd,
-						"port_retrieval_error": portErr,
-					}).Error("Cannot retrieve port from a running Batsim process command")
-					onexit <- 1
-					return
-				}
-
-				if lineport == port {
-					conflict = true
+						conflict = true
+					}
 				}
 			}
 		}
