@@ -47,58 +47,60 @@ func PrepareDirs(exp Experiment) error {
 }
 
 func waitReadyForSimulation(exp Experiment, batargs BatsimArgs) error {
-	port, err := PortFromBatSock(batargs.Socket)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err":                       err,
-			"extracted socket endpoint": batargs.Socket,
-			"batsim command":            exp.Batcmd,
-		}).Error("Cannot retrieve port from Batsim socket")
-		return err
-	}
-
 	log.WithFields(log.Fields{
 		"ready timeout (seconds)":   exp.ReadyTimeout,
-		"extracted port":            port,
 		"extracted socket endpoint": batargs.Socket,
 		"batsim command":            exp.Batcmd,
 	}).Info("Waiting for valid context")
 
-	socketInUse := true
-	anotherBatsim := true
-
-	sockChan := make(chan int)
-	batChan := make(chan int)
-
-	go waitTcpPortAvailableSs(port, sockChan)
-	go waitNoConflictingBatsim(batargs, batChan)
-
-	for socketInUse || anotherBatsim {
-		select {
-		case <-time.After(time.Duration(exp.ReadyTimeout) * time.Second):
+	if strings.HasPrefix(batargs.Socket, "tcp") {
+		port, err := PortFromBatSock(batargs.Socket)
+		if err != nil {
 			log.WithFields(log.Fields{
-				"ready timeout (seconds)":    exp.ReadyTimeout,
-				"scanned port":               port,
-				"batsim command":             exp.Batcmd,
-				"socket in use":              socketInUse,
-				"conflicting batsim running": anotherBatsim,
-			}).Error("Context remains invalid")
-			return fmt.Errorf("Context remains invalid")
-		case code := <-sockChan:
-			if code == 0 {
-				socketInUse = false
-			} else {
-				return fmt.Errorf("Could not determine whether the network port is in use")
-			}
-		case code := <-batChan:
-			if code == 0 {
-				anotherBatsim = false
-			} else {
-				return fmt.Errorf("Could not determine whether other Batsim instances are running")
+				"err":                       err,
+				"extracted socket endpoint": batargs.Socket,
+				"batsim command":            exp.Batcmd,
+			}).Error("Cannot retrieve port from Batsim socket")
+			return err
+		}
+
+		socketInUse := true
+		anotherBatsim := true
+
+		sockChan := make(chan int)
+		batChan := make(chan int)
+
+		go waitTcpPortAvailableSs(port, sockChan)
+		go waitNoConflictingBatsim(batargs, batChan)
+
+		for socketInUse || anotherBatsim {
+			select {
+			case <-time.After(time.Duration(exp.ReadyTimeout) * time.Second):
+				log.WithFields(log.Fields{
+					"ready timeout (seconds)":    exp.ReadyTimeout,
+					"scanned port":               port,
+					"batsim command":             exp.Batcmd,
+					"socket in use":              socketInUse,
+					"conflicting batsim running": anotherBatsim,
+				}).Error("Context remains invalid")
+				return fmt.Errorf("Context remains invalid")
+			case code := <-sockChan:
+				if code == 0 {
+					socketInUse = false
+				} else {
+					return fmt.Errorf("Could not determine whether the network port is in use")
+				}
+			case code := <-batChan:
+				if code == 0 {
+					anotherBatsim = false
+				} else {
+					return fmt.Errorf("Could not determine whether other Batsim instances are running")
+				}
 			}
 		}
+	} else if strings.HasPrefix(batargs.Socket, "ipc") {
+		// TODO check what can be checked on the ipc path endpoint
 	}
-
 	return nil
 }
 
