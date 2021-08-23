@@ -114,13 +114,6 @@ func areConflictingBatsimInstances(batCtx1, batCtx2 BatsimArgs) bool {
 		}
 	}
 
-	if (batCtx1.RedisEnabled && batCtx2.RedisEnabled) &&
-		(batCtx1.RedisHostname == batCtx2.RedisHostname) &&
-		(batCtx1.RedisPort == batCtx2.RedisPort) &&
-		(batCtx1.RedisPrefix == batCtx2.RedisPrefix) {
-		return true
-	}
-
 	return false
 }
 
