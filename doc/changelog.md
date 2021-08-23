@@ -18,6 +18,11 @@ Robintest's public API includes:
 
 [//]: ==========================================================================
 ## [Unreleased]
+### Removed
+- Redis is no longer managed by Robin, as Batsim-5.0.0 dropped Redis support.
+
+[//]: ==========================================================================
+## [1.2.0] - 2018-12-19 - for Batsim before 5.0.0
 ### Changed
 - Batsim commands are no longer directly parsed by batexpe.
   This is now delegated to Batsim by calling it with
