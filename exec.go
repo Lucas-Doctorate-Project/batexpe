@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -170,15 +171,26 @@ func waitTcpPortAvailableSs(port uint16, onexit chan int) {
 	r := regexp.MustCompile(":" + portStr)
 
 	for {
-		ssCmd := exec.Command("ss")
-		ssCmd.Args = []string{ssCmd.Args[0], "-tln"}
+		var cmd *exec.Cmd
+		var cmdName string
 
-		outBuf, err := ssCmd.Output()
+		// Use netstat on macOS, ss on Linux
+		if runtime.GOOS == "darwin" {
+			cmdName = "netstat"
+			cmd = exec.Command(cmdName)
+			cmd.Args = []string{cmd.Args[0], "-an", "-p", "tcp"}
+		} else {
+			cmdName = "ss"
+			cmd = exec.Command(cmdName)
+			cmd.Args = []string{cmd.Args[0], "-tln"}
+		}
+
+		outBuf, err := cmd.Output()
 		if err != nil {
 			log.WithFields(log.Fields{
 				"err":     err,
-				"command": ssCmd,
-			}).Error("Cannot list open sockets via ss")
+				"command": cmd,
+			}).Error(fmt.Sprintf("Cannot list open sockets via %s", cmdName))
 			onexit <- 1
 			return
 		}

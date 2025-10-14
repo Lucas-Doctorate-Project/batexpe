@@ -17,8 +17,9 @@ RUN nix-env -i go
 RUN git clone --branch v2.0.0 --depth 1 --single-branch \
               https://framagit.org/batsim/batsim.git /batsim
 
-# Robin dependencies
-RUN nix-env -i procps iproute2
+# Robin dependencies (Linux-specific tools)
+# Note: ps is available on macOS natively (BSD), netstat is used instead of ss
+RUN if [ "$(uname)" = "Linux" ]; then nix-env -i procps iproute2; fi
 
 # Test and CI dependencies
 RUN nix-env -i gnugrep psmisc bats findutils gnused gawk python3 gnumake which
