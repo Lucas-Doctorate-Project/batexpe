@@ -4,7 +4,7 @@ import (
 	"fmt"
 	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
-	"framagit.org/batsim/batexpe"
+	"github.com/Lucas-Doctorate-Project/batexpe"
 	"io/ioutil"
 	"os"
 	"os/exec"
