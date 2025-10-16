@@ -170,26 +170,56 @@ func waitTcpPortAvailableSs(port uint16, onexit chan int) {
 	portStr := strconv.FormatUint(uint64(port), 10)
 	r := regexp.MustCompile(":" + portStr)
 
-	for {
-		var cmd *exec.Cmd
-		var cmdName string
+	// Determine which command to use with fallback logic
+	var cmdName string
+	var cmdArgs []string
 
-		// Use netstat on macOS, ss on Linux
-		if runtime.GOOS == "darwin" {
+	// Prefer netstat on macOS, ss on Linux
+	if runtime.GOOS == "darwin" {
+		// macOS: try netstat first
+		if _, err := exec.LookPath("netstat"); err == nil {
 			cmdName = "netstat"
-			cmd = exec.Command(cmdName)
-			cmd.Args = []string{cmd.Args[0], "-an", "-p", "tcp"}
-		} else {
+			cmdArgs = []string{"-an", "-p", "tcp"}
+		} else if _, err := exec.LookPath("ss"); err == nil {
+			// Fallback to ss if netstat is not available
 			cmdName = "ss"
-			cmd = exec.Command(cmdName)
-			cmd.Args = []string{cmd.Args[0], "-tln"}
+			cmdArgs = []string{"-tln"}
+		} else {
+			log.Error("Neither netstat nor ss command is available")
+			onexit <- 1
+			return
 		}
+	} else {
+		// Linux and others: try ss first, fallback to netstat
+		if _, err := exec.LookPath("ss"); err == nil {
+			cmdName = "ss"
+			cmdArgs = []string{"-tln"}
+		} else if _, err := exec.LookPath("netstat"); err == nil {
+			cmdName = "netstat"
+			cmdArgs = []string{"-an", "-p", "tcp"}
+		} else {
+			log.Error("Neither ss nor netstat command is available")
+			onexit <- 1
+			return
+		}
+	}
+
+	log.WithFields(log.Fields{
+		"command": cmdName,
+		"args":    cmdArgs,
+		"port":    port,
+		"GOOS":    runtime.GOOS,
+	}).Debug("Using network command for port checking")
+
+	for {
+		cmd := exec.Command(cmdName, cmdArgs...)
 
 		outBuf, err := cmd.Output()
 		if err != nil {
 			log.WithFields(log.Fields{
 				"err":     err,
-				"command": cmd,
+				"command": cmdName,
+				"args":    cmdArgs,
 			}).Error(fmt.Sprintf("Cannot list open sockets via %s", cmdName))
 			onexit <- 1
 			return
